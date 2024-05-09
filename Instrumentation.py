@@ -31,16 +31,19 @@ class instrument:
         for root, dirs, files in os.walk(folder_name):
             for file_name in files:
                 file_path = os.path.join(root, file_name)
+                # if "service/impl" in file_path:
+                #         print(file_path)
                 # Instrument the Controller and Impl
                 if (all(keyword in file_name for keyword in ["Controller"])) and \
                     all(keyword not in file_name for keyword in ["Test","class"]): 
+                    
                     with open(file_path, 'r', encoding='utf-8') as file:
                         for line in file:
                             if re.match(r'\s*package\s+.*;', line):
                                 self.script[file_path.split("/controller")[0]] = line.strip().split(".controller")[0].split("package ")[1]
                                 break
         print(self.script,len(list(self.script.keys())))
-        self.instrument_AOP()
+        # self.instrument_AOP()
         
     # Called for each of the files to be instrumented    
     def instrument_function_info(self,file_path):

@@ -110,7 +110,8 @@ public class LoggingAspect {{
             long startTime = System.currentTimeMillis();
 
             if (RequestContextHolder.getRequestAttributes() == null) {{
-                return null;
+                Object result = joinPoint.proceed(); //执行实际的方法
+                return result;
             }}
             HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
     
@@ -209,7 +210,8 @@ public class LoggingAspect {{
             long startTime = System.currentTimeMillis();
 
             if (RequestContextHolder.getRequestAttributes() == null) {{
-                return null;
+                Object result = joinPoint.proceed(); //执行实际的方法
+                return result;
             }}
             HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
     
