@@ -2,9 +2,11 @@ import xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup
 import re
 import os 
+import xml.etree.ElementTree as ET
 from slimit.parser import Parser
 from slimit.visitors import nodevisitor
 from slimit import ast
+import json
 
 class Node:
     def __init__(self, id, label, type, code, location, value):
@@ -23,6 +25,15 @@ class Edge:
         self.relation_label = relation_label
         self.relation_type = relation_type
         self.arguments = arguments
+
+class API_node:
+    def __init__(self, source, target, trigger, herf, data):
+        self.source = source
+        self.target = target
+        self.target = target
+        self.trigger = trigger
+        self.herf = herf
+        self.data = data
 
 def parse_graphml(file_path):
     tree = ET.parse(file_path)
@@ -173,13 +184,70 @@ def analyze_html_js(html_file, js_file):
     for func_name, params in functions.items():
         print(f"{func_name}({', '.join(params)})")
         
+def analyze_html_js(graph_file,api_type):
+    tree = ET.parse(graph_file)
+    if api_type == "axis":
+        code_range = extract_axis(tree)
+        print(code_range)
+        url_nodes, method_nodes, data_nodes, header_nodes = extract_info(tree)
+        print("the url_nodes is:",(url_nodes),len(url_nodes))
+        print("the method_nodes is:",(method_nodes),len(method_nodes))
+        print("the data_nodes is:",(data_nodes),len(data_nodes))
+        print("the header_nodes is:",(header_nodes),len(header_nodes))
+        for method_node in method_nodes:
+            pass
 
+def find_nodes_by_key(root, key,value):
+    namespaces = {'graphml': 'http://graphml.graphdrawing.org/xmlns'} 
+    nodes = []
+    for node in root.findall('graphml:graph/graphml:node', namespaces):
+        for data in node.findall('graphml:data[@key="Code"]', namespaces):
+            if data.text == value and (value == "url" or value == "headers"):
+                nodes.append(node)
+                # print(node.attrib.items())
+            elif data.text == value and value == "type":
+                edge = root.findall(f".//graphml:graph/graphml:edge[@target='{node.get('id')}']", namespaces)[0]
+                print("the edges is:",edge.get('source'))
+                source_edges = root.findall(f".//graphml:graph/graphml:edge[@source='{edge.get('source')}']", namespaces)[-1]
+                print("the source edge is:",source_edges.get('id'))
+                data_arguments = source_edges.find("graphml:data[@key='Arguments']", namespaces)
+                print(type(data_arguments.text.lower()),type(json.dumps({"kwarg":"post"})))
+                print(data_arguments.text.lower().strip(), json.dumps({"kwarg":"post"}).strip())
+                if "post" in data_arguments.text.lower() or "put" in data_arguments.text.lower() or "delete" in data_arguments.text.lower() or "get" in data_arguments.text.lower():
+                    nodes.append(node)
+                
+    return nodes
+
+def extract_axis(root):
+    namespaces = {'graphml': 'http://graphml.graphdrawing.org/xmlns'} 
+    ajax_nodes = []
+    for node in root.findall('graphml:graph/graphml:node', namespaces):
+        for data in node.findall('graphml:data[@key="Code"]', namespaces):
+            if data.get('key') == 'Code' and data.text == 'ajax':
+                node = root.find(f".//graphml:graph/graphml:node[@id='{int(node.get('id'))+1}']", namespaces)
+                print(node,data.text)
+                location_data = node.findall('graphml:data[@key="Location"]', namespaces)[0]
+                if location_data is not None:
+                    print(f"Node ID: {node.get('id')}, Location: {location_data.text}")
+                    ajax_nodes.append((node.get('id'), convert_to_dict(location_data.text)))
+    return ajax_nodes
+
+def convert_to_dict(location_str):
+    json_str = location_str.replace("start", '"start"').replace("end", '"end"')
+    json_str = json_str.replace("line", '"line"').replace("column", '"column"')
+    location_dict = json.loads(json_str)
+    return location_dict
+
+def extract_info(root):
+    url_nodes = find_nodes_by_key(root, 'code','url')
+    method_nodes = find_nodes_by_key(root,'code', 'type')
+    data_nodes = find_nodes_by_key(root,'code', 'data')
+    header_nodes = find_nodes_by_key(root,'code', 'headers')
+    return url_nodes, method_nodes, data_nodes, header_nodes  
 
 if __name__ == "__main__":
     # nodes, edges = parse_graphml('/home/yifannus2023/JAW/data/out/output.graphml')
     # print(nodes)
     # analyze_data_flow(nodes, edges, "434")
-    html_parser("/home/yifannus2023/train-ticket-modify/ts-ui-dashboard/static/client_order_list.html")
-    # html_file = '/home/yifannus2023/train-ticket-modify/ts-ui-dashboard/static/client_order_list.html'
-    # js_file = '/home/yifannus2023/train-ticket-modify/ts-ui-dashboard/static/assets/js/client_order_list.js'
-    # analyze_html_js(html_file, js_file)
+    # html_parser("/home/yifannus2023/train-ticket-modify/ts-ui-dashboard/static/client_order_list.html")
+    analyze_html_js("/home/yifannus2023/JAW/data/out/output1.graphml","axis")
