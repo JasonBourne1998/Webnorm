@@ -9,6 +9,7 @@ from slimit import ast
 import json
 import esprima
 
+namespaces = {'graphml': 'http://graphml.graphdrawing.org/xmlns'} 
 class Node:
     def __init__(self, id, label, type, code, location, value):
         self.id = id
@@ -167,45 +168,30 @@ def parse_js(js_content):
     
     return functions
 
-def analyze_html_js(html_file, js_file):
-    with open(html_file, 'r', encoding='utf-8') as file:
-        html_content = file.read()
-    
-    with open(js_file, 'r', encoding='utf-8') as file:
-        js_content = file.read()
-
-    vue_data = extract_vue_data(html_content)
-    functions = parse_js(js_content)
-
-    print("Vue Data Bindings:")
-    for key, value in vue_data.items():
-        print(f"{key}: {value}")
-
-    print("\nJavaScript Functions:")
-    for func_name, params in functions.items():
-        print(f"{func_name}({', '.join(params)})")
         
-def analyze_html_js(graph_file,api_type):
+def analyze_html_js(file_name,graph_file,api_type):
     tree = ET.parse(graph_file)
-    file_name = "/home/yifannus2023/train-ticket-modify/ts-ui-dashboard/static/assets/js/client_order_list.js"
     # js_code = read_js_code(file_name)
     if api_type == "axis":
-        code_range = extract_axis(tree)
-        print(code_range)
+        axis_range = extract_axis(tree)
+        print(axis_range)
         url_nodes, method_nodes, data_nodes, header_nodes = extract_info(tree)
         print("the url_nodes is:",(url_nodes),len(url_nodes))
         print("the method_nodes is:",(method_nodes),len(method_nodes))
         print("the data_nodes is:",(data_nodes),len(data_nodes))
         print("the header_nodes is:",(header_nodes),len(header_nodes))
-        for method_node in method_nodes:
+        for method_node in method_nodes: #TODO: Initialize the node
             pass
-        func_API = extract_trigger_obj(tree,code_range)
-        print(func_API,type(func_API))
-        mounted_range,method_range = extract_methods_range(tree)
+        func_API,function_range = extract_trigger_obj(tree,axis_range)
+        print(func_API,type(func_API),function_range)
+        method_range,mounted_range = extract_methods_range(tree)
+        method_trigger = {}
         for function_name, _ in func_API.items():
-            initial_caller = find_initial_caller(file_name, function_name)
-            print(initial_caller)
-        extract_if_condition(tree,code_range)
+            initial_caller = find_initial_caller(file_name, function_name,function_range,tree,mounted_range,method_range)
+            method_trigger[function_name] = initial_caller
+        print(method_trigger)
+        
+        extract_if_condition(tree,axis_range)
 
 def find_nodes_by_key(root, key,value):
     namespaces = {'graphml': 'http://graphml.graphdrawing.org/xmlns'} 
@@ -233,7 +219,7 @@ def find_nodes_by_key(root, key,value):
                 init_node = root.findall(f".//graphml:graph/graphml:node[@id='{init_node_id}']", namespaces)[0]
                 kind_data = init_node.find('graphml:data[@key="Kind"]', namespaces)
                 type_data = init_node.find('graphml:data[@key="Type"]', namespaces)      
-                print("the node is:",init_node,init_node.get('id'),type_data.text )
+                # print("the node is:",init_node,init_node.get('id'),type_data.text )
                 if type_data.text == "Property" and kind_data.text == "init":
                     if len(source_edges) == 2:
                         source_edge = source_edges[0]
@@ -249,7 +235,7 @@ def find_nodes_by_key(root, key,value):
     return nodes
 
 def extract_trigger_obj(root,code_range):
-    namespaces = {'graphml': 'http://graphml.graphdrawing.org/xmlns'} 
+    function_range = {}
     res = {}
     nodes = []
     for node in root.findall('graphml:graph/graphml:node', namespaces):
@@ -261,12 +247,15 @@ def extract_trigger_obj(root,code_range):
             if ifContain:
                 source_edge = root.findall(f".//graphml:graph/graphml:edge[@source='{node.get('id')}']", namespaces)[0]
                 func_name = source_edge.find("graphml:data[@key='Arguments']", namespaces).text.split(":")[-1].split("}")[0][1:-1]
+                function_code_range = convert_to_dict(root.find(f".//graphml:graph/graphml:node[@id='{source_edge.get('source')}']", namespaces).find("graphml:data[@key='Location']", namespaces).text)
+                # print('the range is:',func_name,function_code_range)
                 if ("onConfirm" not in func_name) and ("methods" not in func_name) and ("success" not in func_name):
-                    if func_name not in res.keys():
-                        res[func_name] = []
-                    res[func_name].append(id)
-    print(res)
-    return res
+                    # if func_name not in res.keys():
+                    #     res[func_name] = []
+                    res[func_name] = id
+                if func_name != "methods":
+                    function_range[func_name] = function_code_range
+    return res,function_range
 
 def extract_if_condition(root,code_range):
     pass
@@ -287,7 +276,6 @@ def judge_contain_Location(main_range,ranges):
     return None,False
 
 def extract_axis(root):
-    namespaces = {'graphml': 'http://graphml.graphdrawing.org/xmlns'} 
     ajax_nodes = []
     for node in root.findall('graphml:graph/graphml:node', namespaces):
         for data in node.findall('graphml:data[@key="Code"]', namespaces):
@@ -314,7 +302,6 @@ def extract_info(root):
     return url_nodes, method_nodes, data_nodes, header_nodes  
 
 def extract_methods_range(root):
-    namespaces = {'graphml': 'http://graphml.graphdrawing.org/xmlns'} 
     for node in root.findall('graphml:graph/graphml:node', namespaces):
         for data in node.findall('graphml:data[@key="Code"]', namespaces): 
             if data.get('key') == 'Code' and data.text == 'methods':
@@ -327,15 +314,56 @@ def extract_methods_range(root):
                 mounted_range = node_id.find('graphml:data[@key="Location"]', namespaces).text
     return convert_to_dict(methods_range),convert_to_dict(mounted_range)
 
-def find_initial_caller(filename, target_function):
+def find_initial_caller(filename, target_function,function_range,root,mounted_range,method_range):
     pattern = target_function+"("
-    print(pattern)
+    trigger_function = set()
     with open(filename, 'r', encoding='utf-8') as file:
         for i, line in enumerate(file, 1):  # enumerate从1开始计数
-            if pattern in line:
-                print(f"Function '{target_function}' found at line {i}")
-    return target_function 
+            if (i > method_range["start"]["line"] and i < method_range["end"]["line"]):
+                if pattern in line:
+                    # print('jfis,',pattern,line)
+                    if (i < function_range[target_function]["start"]["line"]) or  (i > function_range[target_function]["end"]["line"]):
+                        trigger_function.add(traverse(filename,target_function,function_range,i,mounted_range,root))
+    return trigger_function 
 
+def traverse(filename,target_function,function_range,line,mounted_range,root):
+    func_name = None
+    # print('the target function is:',target_function)
+    for node in root.findall('graphml:graph/graphml:node', namespaces):
+        Code = node.find('graphml:data[@key="Code"]', namespaces).text
+        if Code == "methods":
+            method_node = node
+            # print("22",method_node.get('id'),target_function,line)
+            method_obj = str(int(method_node.get('id')) + 1)
+            for method_attr in root.findall(f".//graphml:graph/graphml:edge[@source='{method_obj}']", namespaces):
+                if "arg" in method_attr.find('graphml:data[@key="Arguments"]', namespaces).text :
+                    method_attr_range = convert_to_dict(root.find(f".//graphml:graph/graphml:node[@id='{method_attr.get('target')}']", namespaces).find('graphml:data[@key="Location"]', namespaces).text)
+                    # print('the wjkf',method_attr_range,line)
+                    if (line > method_attr_range["start"]["line"]) and  (line < method_attr_range["end"]["line"]):
+                        for func in  root.findall(f".//graphml:graph/graphml:edge[@source='{method_attr.get('target')}']", namespaces):
+                            # print('func',func.find("graphml:data[@key='Arguments']", namespaces).text.lower())
+                            if "kwarg" in func.find("graphml:data[@key='Arguments']", namespaces).text.lower():
+                                func_name = func.find("graphml:data[@key='Arguments']", namespaces).text.split(":")[-1].split("}")[0][1:-1]
+                        # print("the method_attr_range is:",func_name, method_attr_range)
+    if not func_name:
+        return target_function  
+    mounted_content = extract_lines(filename, mounted_range["start"]["line"], mounted_range["end"]["line"])
+    for content_line in mounted_content:
+        if func_name in content_line:
+            return "mounted" 
+
+    pattern = func_name + "("
+    try:
+        with open(filename, 'r', encoding='utf-8') as file:
+            for i, file_line in enumerate(file, 1):  # 从1开始编号
+                if pattern in file_line and (i < function_range["start"]["line"] or i > function_range["end"]["line"]):
+                    new_func_name = traverse(filename, func_name, function_range, i, mounted_range, root)
+                    return new_func_name or target_function  # 如果 new_func_name 是 None，则返回 target_function
+    except Exception as e:
+        pass
+
+    return func_name or target_function
+            
 def read_js_code(file_path):
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
@@ -344,10 +372,18 @@ def read_js_code(file_path):
         print("File not found. Please check the path and try again.")
         return None
 
+def extract_lines(file_path, start_line, end_line):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+    
+    selected_lines = lines[start_line-1:end_line]  # 因为索引是从0开始的
+
+    return selected_lines
+
 
 if __name__ == "__main__":
     # nodes, edges = parse_graphml('/home/yifannus2023/JAW/data/out/output.graphml')
     # print(nodes)
     # analyze_data_flow(nodes, edges, "434")
     # html_parser("/home/yifannus2023/train-ticket-modify/ts-ui-dashboard/static/client_order_list.html")
-    analyze_html_js("/home/yifannus2023/JAW/data/out/output1.graphml","axis")
+    analyze_html_js("/home/yifannus2023/train-ticket-modify/ts-ui-dashboard/static/assets/js/client_order_list.js","/home/yifannus2023/JAW/data/out/output1.graphml","axis")
