@@ -7,6 +7,7 @@ from slimit.parser import Parser
 from slimit.visitors import nodevisitor
 from slimit import ast
 import json
+import esprima
 
 class Node:
     def __init__(self, id, label, type, code, location, value):
@@ -27,13 +28,13 @@ class Edge:
         self.arguments = arguments
 
 class API_node:
-    def __init__(self, source, target, trigger, herf, data):
-        self.source = source
-        self.target = target
-        self.target = target
-        self.trigger = trigger
-        self.herf = herf
-        self.data = data
+    def __init__(self, API, source, target, trigger, herf, data):
+        self.API = API
+        self.source = source #source API / Html / data
+        self.target = target #Target API / Html / data
+        self.trigger = trigger  #Trigger API / Html / data
+        self.herf = herf #Can redirect ? 
+        self.data = data #Caontain Data
 
 def parse_graphml(file_path):
     tree = ET.parse(file_path)
@@ -186,6 +187,8 @@ def analyze_html_js(html_file, js_file):
         
 def analyze_html_js(graph_file,api_type):
     tree = ET.parse(graph_file)
+    file_name = "/home/yifannus2023/train-ticket-modify/ts-ui-dashboard/static/assets/js/client_order_list.js"
+    # js_code = read_js_code(file_name)
     if api_type == "axis":
         code_range = extract_axis(tree)
         print(code_range)
@@ -196,6 +199,13 @@ def analyze_html_js(graph_file,api_type):
         print("the header_nodes is:",(header_nodes),len(header_nodes))
         for method_node in method_nodes:
             pass
+        func_API = extract_trigger_obj(tree,code_range)
+        print(func_API,type(func_API))
+        mounted_range,method_range = extract_methods_range(tree)
+        for function_name, _ in func_API.items():
+            initial_caller = find_initial_caller(file_name, function_name)
+            print(initial_caller)
+        extract_if_condition(tree,code_range)
 
 def find_nodes_by_key(root, key,value):
     namespaces = {'graphml': 'http://graphml.graphdrawing.org/xmlns'} 
@@ -207,16 +217,74 @@ def find_nodes_by_key(root, key,value):
                 # print(node.attrib.items())
             elif data.text == value and value == "type":
                 edge = root.findall(f".//graphml:graph/graphml:edge[@target='{node.get('id')}']", namespaces)[0]
-                print("the edges is:",edge.get('source'))
+                # print("the edges is:",edge.get('source'))
                 source_edges = root.findall(f".//graphml:graph/graphml:edge[@source='{edge.get('source')}']", namespaces)[-1]
-                print("the source edge is:",source_edges.get('id'))
+                # print("the source edge is:",source_edges.get('id'))
                 data_arguments = source_edges.find("graphml:data[@key='Arguments']", namespaces)
-                print(type(data_arguments.text.lower()),type(json.dumps({"kwarg":"post"})))
-                print(data_arguments.text.lower().strip(), json.dumps({"kwarg":"post"}).strip())
+                # print(type(data_arguments.text.lower()),type(json.dumps({"kwarg":"post"})))
+                # print(data_arguments.text.lower().strip(), json.dumps({"kwarg":"post"}).strip())
                 if "post" in data_arguments.text.lower() or "put" in data_arguments.text.lower() or "delete" in data_arguments.text.lower() or "get" in data_arguments.text.lower():
                     nodes.append(node)
-                
+            elif data.text == value and value == "data":
+                edge = root.findall(f".//graphml:graph/graphml:edge[@target='{node.get('id')}']", namespaces)[0]
+                print("the edges is:",edge.get('source'))
+                source_edges = root.findall(f".//graphml:graph/graphml:edge[@source='{edge.get('source')}']", namespaces)
+                init_node_id = source_edges[0].get('source')
+                init_node = root.findall(f".//graphml:graph/graphml:node[@id='{init_node_id}']", namespaces)[0]
+                kind_data = init_node.find('graphml:data[@key="Kind"]', namespaces)
+                type_data = init_node.find('graphml:data[@key="Type"]', namespaces)      
+                print("the node is:",init_node,init_node.get('id'),type_data.text )
+                if type_data.text == "Property" and kind_data.text == "init":
+                    if len(source_edges) == 2:
+                        source_edge = source_edges[0]
+                        if source_edges.index(source_edge) == 0:
+                            if "data" in source_edge.find("graphml:data[@key='Arguments']", namespaces).text.lower() and "kwarg" in source_edge.find("graphml:data[@key='Arguments']", namespaces).text.lower():
+                                if len(nodes) == 0:
+                                    print(node.get('id'),node.find('graphml:data[@key="Location"]', namespaces).text)
+                                    nodes.append(node)
+                                elif node not in nodes and ( abs(int(node.get('id'))-int(nodes[-1].get('id'))) > 2 ) :
+                                    print(node.get('id'),node.find('graphml:data[@key="Location"]', namespaces).text)
+                                    nodes.append(node)
+                                else:pass
     return nodes
+
+def extract_trigger_obj(root,code_range):
+    namespaces = {'graphml': 'http://graphml.graphdrawing.org/xmlns'} 
+    res = {}
+    nodes = []
+    for node in root.findall('graphml:graph/graphml:node', namespaces):
+        Kind = node.findall('graphml:data[@key="Kind"]', namespaces)[0]
+        Type = node.findall('graphml:data[@key="Type"]', namespaces)[0]
+        if Kind.text == "init" and Type.text == "Property":
+            Location = convert_to_dict(node.find('graphml:data[@key="Location"]', namespaces).text)
+            id, ifContain =  judge_contain_Location(Location,code_range)
+            if ifContain:
+                source_edge = root.findall(f".//graphml:graph/graphml:edge[@source='{node.get('id')}']", namespaces)[0]
+                func_name = source_edge.find("graphml:data[@key='Arguments']", namespaces).text.split(":")[-1].split("}")[0][1:-1]
+                if ("onConfirm" not in func_name) and ("methods" not in func_name) and ("success" not in func_name):
+                    if func_name not in res.keys():
+                        res[func_name] = []
+                    res[func_name].append(id)
+    print(res)
+    return res
+
+def extract_if_condition(root,code_range):
+    pass
+
+def judge_contain_Location(main_range,ranges):
+    main_start_line = main_range['start']['line']
+    main_end_line = main_range['end']['line']
+    ids = []
+    for id, range in ranges:
+        range_start_line = range['start']['line']
+        range_end_line = range['end']['line']
+
+        # 检查 main_range 是否包含当前 range
+        if main_start_line <= range_start_line and main_end_line >= range_end_line:
+            print(f"Main range contains range with ID {id}.")
+            ids.append(id)
+    if ids:return ids, True
+    return None,False
 
 def extract_axis(root):
     namespaces = {'graphml': 'http://graphml.graphdrawing.org/xmlns'} 
@@ -244,6 +312,38 @@ def extract_info(root):
     data_nodes = find_nodes_by_key(root,'code', 'data')
     header_nodes = find_nodes_by_key(root,'code', 'headers')
     return url_nodes, method_nodes, data_nodes, header_nodes  
+
+def extract_methods_range(root):
+    namespaces = {'graphml': 'http://graphml.graphdrawing.org/xmlns'} 
+    for node in root.findall('graphml:graph/graphml:node', namespaces):
+        for data in node.findall('graphml:data[@key="Code"]', namespaces): 
+            if data.get('key') == 'Code' and data.text == 'methods':
+                source_edge = root.findall(f".//graphml:graph/graphml:edge[@target='{node.get('id')}']", namespaces)[0]
+                node_id = root.find(f".//graphml:graph/graphml:node[@id='{source_edge.get('source')}']", namespaces)
+                methods_range = node_id.find('graphml:data[@key="Location"]', namespaces).text
+            if data.get('key') == 'Code' and data.text == 'mounted':
+                source_edge = root.findall(f".//graphml:graph/graphml:edge[@target='{node.get('id')}']", namespaces)[0]
+                node_id = root.find(f".//graphml:graph/graphml:node[@id='{source_edge.get('source')}']", namespaces)
+                mounted_range = node_id.find('graphml:data[@key="Location"]', namespaces).text
+    return convert_to_dict(methods_range),convert_to_dict(mounted_range)
+
+def find_initial_caller(filename, target_function):
+    pattern = target_function+"("
+    print(pattern)
+    with open(filename, 'r', encoding='utf-8') as file:
+        for i, line in enumerate(file, 1):  # enumerate从1开始计数
+            if pattern in line:
+                print(f"Function '{target_function}' found at line {i}")
+    return target_function 
+
+def read_js_code(file_path):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            return file.read()
+    except FileNotFoundError:
+        print("File not found. Please check the path and try again.")
+        return None
+
 
 if __name__ == "__main__":
     # nodes, edges = parse_graphml('/home/yifannus2023/JAW/data/out/output.graphml')
