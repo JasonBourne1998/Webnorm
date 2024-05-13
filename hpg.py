@@ -176,9 +176,9 @@ def analyze_html_js(file_name,graph_file,api_type):
         axis_range = extract_axis(tree)
         print(axis_range)
         url_nodes, method_nodes, data_nodes, header_nodes = extract_info(tree)
-        print("the url_nodes is:",(url_nodes),len(url_nodes))
+        print("the url_nodes is:",(url_nodes[0].find('graphml:data[@key="Code"]', namespaces).text),url_nodes[0].get('id'),len(url_nodes))
         print("the method_nodes is:",(method_nodes),len(method_nodes))
-        print("the data_nodes is:",(data_nodes),len(data_nodes))
+        print("the data_nodes is:",(data_nodes[0].find('graphml:data[@key="Code"]', namespaces).text),data_nodes[1].get('id'),len(data_nodes))
         print("the header_nodes is:",(header_nodes),len(header_nodes))
         for method_node in method_nodes: #TODO: Initialize the node
             pass
@@ -190,7 +190,7 @@ def analyze_html_js(file_name,graph_file,api_type):
             initial_caller = find_initial_caller(file_name, function_name,function_range,tree,mounted_range,method_range)
             method_trigger[function_name] = initial_caller
         print(method_trigger)
-        
+        extract_data_flow(tree,url_nodes,data_nodes,axis_range,file_name)
         extract_if_condition(tree,axis_range)
 
 def find_nodes_by_key(root, key,value):
@@ -234,6 +234,33 @@ def find_nodes_by_key(root, key,value):
                                 else:pass
     return nodes
 
+def extract_data_flow(tree,url_nodes,data_nodes,axis_range,file_name):
+    ajaxid_dict = {}
+    for node in url_nodes + data_nodes:
+        node_id = node.get('id')
+        location_data = node.find('graphml:data[@key="Location"]', namespaces)
+        if location_data is not None:
+            node_location = convert_to_dict(location_data.text)  
+            ifContain,ajaxid =  is_within_range(node_location, axis_range)
+            if ifContain:
+                if ajaxid not in list(ajaxid_dict.keys()):
+                    ajaxid_dict[ajaxid] = []
+                ajaxid_dict[ajaxid].append(node_id)
+    print(ajaxid_dict)
+    node_dict = {}
+    for ajax,node_ids in ajaxid_dict.items():
+        for node_id in node_ids:
+            target_location = convert_to_dict(tree.find(f".//graphml:graph/graphml:node[@id='{node_id}']", namespaces).find("graphml:data[@key='Location']", namespaces).text)["start"]["line"]
+            content = get_line_from_file(file_name,target_location)   
+            node_dict[node_id] = content.split(":")[-1].strip()
+    print(node_dict)
+    
+    # Inner JS function (no that)
+    
+    # Cross JS function (no that, cannot find the newexpression in this function)
+    
+    # Cross Html (that occurs)
+    
 def extract_trigger_obj(root,code_range):
     function_range = {}
     res = {}
@@ -380,6 +407,19 @@ def extract_lines(file_path, start_line, end_line):
 
     return selected_lines
 
+def is_within_range(node_location, code_ranges):
+    node_start_line = node_location['start']['line']
+    node_end_line = node_location['end']['line']
+    for (i,range) in code_ranges:
+        if node_start_line >= range['start']['line'] and node_end_line <= range['end']['line']:
+            return True,i
+    return False,None
+
+def get_line_from_file(file_path, line_number):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        for current_line_number, line in enumerate(file, start=1):
+            if current_line_number == line_number:
+                return line.strip() 
 
 if __name__ == "__main__":
     # nodes, edges = parse_graphml('/home/yifannus2023/JAW/data/out/output.graphml')
