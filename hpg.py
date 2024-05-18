@@ -87,7 +87,7 @@ def analyze_data_flow(nodes, edges, start_node_id):
                     current_node.children.append(child_node)
                     queue.append(child_node)
                     visited.add(child_node)
-                    print(f" - Following edge to {child_node.id} {child_node.type}")
+                    # print(f" - Following edge to {child_node.id} {child_node.type}")
 
 def html_parser(html_dir):
     with open(html_dir, 'r', encoding='utf-8') as file:
@@ -183,14 +183,17 @@ def analyze_html_js(file_name,graph_file,api_type):
         for method_node in method_nodes: #TODO: Initialize the node
             pass
         func_API,function_range = extract_trigger_obj(tree,axis_range)
-        print(func_API,type(func_API),function_range)
+        print("the func is:",func_API,"-----",function_range)
         method_range,mounted_range = extract_methods_range(tree)
         method_trigger = {}
+        involve_trigger = {}
         for function_name, _ in func_API.items():
-            initial_caller = find_initial_caller(file_name, function_name,function_range,tree,mounted_range,method_range)
+            initial_caller,involved_functions = find_initial_caller(file_name, function_name,function_range,tree,mounted_range,method_range)
             method_trigger[function_name] = initial_caller
-        print(method_trigger)
-        extract_data_flow(tree,url_nodes,data_nodes,axis_range,file_name)
+            involve_trigger[function_name] = involved_functions
+        print("the method trigger:",method_trigger)
+        print("the method involve:",involve_trigger)
+        extract_data_flow(tree,url_nodes,data_nodes,axis_range,file_name,function_range,func_API)
         extract_if_condition(tree,axis_range)
 
 def find_nodes_by_key(root, key,value):
@@ -213,7 +216,7 @@ def find_nodes_by_key(root, key,value):
                     nodes.append(node)
             elif data.text == value and value == "data":
                 edge = root.findall(f".//graphml:graph/graphml:edge[@target='{node.get('id')}']", namespaces)[0]
-                print("the edges is:",edge.get('source'))
+                # print("the edges is:",edge.get('source'))
                 source_edges = root.findall(f".//graphml:graph/graphml:edge[@source='{edge.get('source')}']", namespaces)
                 init_node_id = source_edges[0].get('source')
                 init_node = root.findall(f".//graphml:graph/graphml:node[@id='{init_node_id}']", namespaces)[0]
@@ -234,7 +237,7 @@ def find_nodes_by_key(root, key,value):
                                 else:pass
     return nodes
 
-def extract_data_flow(tree,url_nodes,data_nodes,axis_range,file_name):
+def extract_data_flow(tree,url_nodes,data_nodes,axis_range,file_name,function_range,func_API):
     ajaxid_dict = {}
     for node in url_nodes + data_nodes:
         node_id = node.get('id')
@@ -246,21 +249,77 @@ def extract_data_flow(tree,url_nodes,data_nodes,axis_range,file_name):
                 if ajaxid not in list(ajaxid_dict.keys()):
                     ajaxid_dict[ajaxid] = []
                 ajaxid_dict[ajaxid].append(node_id)
-    print(ajaxid_dict)
+    print("the ajaxd",ajaxid_dict)
     node_dict = {}
     for ajax,node_ids in ajaxid_dict.items():
         for node_id in node_ids:
             target_location = convert_to_dict(tree.find(f".//graphml:graph/graphml:node[@id='{node_id}']", namespaces).find("graphml:data[@key='Location']", namespaces).text)["start"]["line"]
             content = get_line_from_file(file_name,target_location)   
             node_dict[node_id] = content.split(":")[-1].strip()
-    print(node_dict)
+    print("the node dict is:",node_dict)
     
-    # Inner JS function (no that)
-    
-    # Cross JS function (no that, cannot find the newexpression in this function)
-    
-    # Cross Html (that occurs)
-    
+    with open(file_name, 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+    for main_line_number, related_lines in ajaxid_dict.items():
+        function = extract_func_name(func_API,main_line_number)
+        print(f"\nFunction call at line {function}:")
+        codeup = function_range[function]["start"]["line"]
+        for line_number in related_lines:
+            codedown = convert_to_dict(tree.find(f".//graphml:graph/graphml:node[@id='{line_number}']", namespaces).find("graphml:data[@key='Location']", namespaces).text)["start"]["line"]
+            line_code = lines[int(codeup) - 1:int(codedown)-1]
+            if line_number in node_dict:
+                # 提取对应的代码行
+                node_description = node_dict[line_number]
+                print(f"  Node Description: {node_description}")
+                # 在文件中寻找此变量的初始化
+                target_variable = node_description.split(' ')[-1].strip('",')
+                if "api/v1" in target_variable and "+" in target_variable:
+                    target_variables = target_variable.split("+")
+                    target_variables.pop(0)
+                    target_variables.remove("/")
+                else: target_variables = [target_variable]
+                for target_variable in target_variables:
+                    trace_history = []
+                    object_expression = {}
+                    print(target_variable)
+                    find_initialization(target_variable, codedown,codeup,lines,trace_history,object_expression)
+                    for info in reversed(trace_history):  # Print the trace history from initial to last found
+                        print(f"Line {info[0]}: {info[1]}")
+                    print(object_expression)
+
+                    # Cross Html (that occurs)
+                    
+                    # Inner JS function (no that)
+                    
+                    # Cross JS function (no that, cannot find the newexpression in this function)
+
+def find_initialization(current_variable, line_limit,start_line,lines,trace_history,object_expression):
+    for i in range(line_limit - 1, start_line - 1, -1):
+        line = lines[i].strip()
+
+        if '=' in line and current_variable in line.split('=')[0]:
+            variable_name, expression = line.split('=')
+            variable_name = variable_name.strip()
+
+            if variable_name == current_variable or variable_name.endswith(current_variable):
+                trace_history.append((i + 1, line))
+                if 'new Object()' in expression or 'var' in line:
+                    trace_history.append((i + 1, f"{variable_name} is initialized here"))
+                    if 'new Object()' in expression:
+                        # print(f"Line {i+1}: {variable_name,expression}")
+                        object_expression[variable_name.split(" ")[-1]] = []
+                        for idx in range(i+1, line_limit ):
+                            obj = lines[idx].strip()
+                            # print(obj)
+                            if '=' in obj and variable_name.split(" ")[-1] in obj.split('=')[0]:
+                                object_expression[variable_name.split(" ")[-1]].append((obj.split('=')[0].strip(),obj.split('=')[1].strip()))
+                if not ('new Object()' in expression ):
+                    if "(" in expression:
+                        new_target = expression.split('(')[1].strip().split(")")[0].strip(';,')
+                    else:new_target = expression
+                    find_initialization(new_target, i,start_line,lines,trace_history,object_expression) 
+                    break    
+
 def extract_trigger_obj(root,code_range):
     function_range = {}
     res = {}
@@ -297,10 +356,15 @@ def judge_contain_Location(main_range,ranges):
 
         # 检查 main_range 是否包含当前 range
         if main_start_line <= range_start_line and main_end_line >= range_end_line:
-            print(f"Main range contains range with ID {id}.")
+            # print(f"Main range contains range with ID {id}.")
             ids.append(id)
     if ids:return ids, True
     return None,False
+
+def extract_func_name(func_dict,main_line_number):
+    for func_name, numlist in func_dict.items():
+        if str(main_line_number) in numlist:
+            return func_name
 
 def extract_axis(root):
     ajax_nodes = []
@@ -308,10 +372,10 @@ def extract_axis(root):
         for data in node.findall('graphml:data[@key="Code"]', namespaces):
             if data.get('key') == 'Code' and data.text == 'ajax':
                 node = root.find(f".//graphml:graph/graphml:node[@id='{int(node.get('id'))+1}']", namespaces)
-                print(node,data.text)
+                # print(node,data.text)
                 location_data = node.findall('graphml:data[@key="Location"]', namespaces)[0]
                 if location_data is not None:
-                    print(f"Node ID: {node.get('id')}, Location: {location_data.text}")
+                    # print(f"Node ID: {node.get('id')}, Location: {location_data.text}")
                     ajax_nodes.append((node.get('id'), convert_to_dict(location_data.text)))
     return ajax_nodes
 
@@ -344,16 +408,19 @@ def extract_methods_range(root):
 def find_initial_caller(filename, target_function,function_range,root,mounted_range,method_range):
     pattern = target_function+"("
     trigger_function = set()
+    involved_functions = []
     with open(filename, 'r', encoding='utf-8') as file:
         for i, line in enumerate(file, 1):  # enumerate从1开始计数
             if (i > method_range["start"]["line"] and i < method_range["end"]["line"]):
                 if pattern in line:
                     # print('jfis,',pattern,line)
                     if (i < function_range[target_function]["start"]["line"]) or  (i > function_range[target_function]["end"]["line"]):
-                        trigger_function.add(traverse(filename,target_function,function_range,i,mounted_range,root))
-    return trigger_function 
+                        trigger_function.add(traverse(filename,target_function,function_range,i,mounted_range,root,involved_functions))
+    # print('the involve is:',involved_functions)
+    return trigger_function,involved_functions
 
-def traverse(filename,target_function,function_range,line,mounted_range,root):
+def traverse(filename,target_function,function_range,line,mounted_range,root,involved_functions):
+    all_func = set()
     func_name = None
     # print('the target function is:',target_function)
     for node in root.findall('graphml:graph/graphml:node', namespaces):
@@ -371,12 +438,16 @@ def traverse(filename,target_function,function_range,line,mounted_range,root):
                             # print('func',func.find("graphml:data[@key='Arguments']", namespaces).text.lower())
                             if "kwarg" in func.find("graphml:data[@key='Arguments']", namespaces).text.lower():
                                 func_name = func.find("graphml:data[@key='Arguments']", namespaces).text.split(":")[-1].split("}")[0][1:-1]
+                                if func_name not in involved_functions:
+                                    involved_functions.append(func_name)
                         # print("the method_attr_range is:",func_name, method_attr_range)
     if not func_name:
         return target_function  
     mounted_content = extract_lines(filename, mounted_range["start"]["line"], mounted_range["end"]["line"])
     for content_line in mounted_content:
         if func_name in content_line:
+            if "mounted" not in involved_functions:
+                involved_functions.append("mounted")
             return "mounted" 
 
     pattern = func_name + "("
@@ -427,3 +498,33 @@ if __name__ == "__main__":
     # analyze_data_flow(nodes, edges, "434")
     # html_parser("/home/yifannus2023/train-ticket-modify/ts-ui-dashboard/static/client_order_list.html")
     analyze_html_js("/home/yifannus2023/train-ticket-modify/ts-ui-dashboard/static/assets/js/client_order_list.js","/home/yifannus2023/JAW/data/out/output1.graphml","axis")
+
+from bs4 import BeautifulSoup
+
+# 假设我们有一个HTML文件或字符串
+html_content = """
+<tbody>
+    <tr v-for="(item, index) in myOrderList">
+        <td>{{ index }}</td>
+        <td>{{ item.id }}</td>
+        <td>{{ item.from }}</td>
+        <td>{{ item.to }}</td>
+        <td>{{ item.trainNumber }}</td>
+    </tr>
+</tbody>
+"""
+
+def extract_vue_data_source(html_content):
+    soup = BeautifulSoup(html_content, 'lxml')
+    
+    # 查找所有使用v-for的元素
+    v_for_elements = soup.find_all(lambda tag: tag.has_attr('v-for'))
+    
+    for element in v_for_elements:
+        v_for = element['v-for']
+        # 简单解析v-for的内容，找到数据源名称
+        data_source = v_for.split(' in ')[1]
+        print(f"Found v-for in element {element.name}, data source: {data_source}")
+
+# 调用函数
+extract_vue_data_source(html_content)
