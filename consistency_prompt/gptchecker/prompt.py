@@ -7,7 +7,10 @@ INPUT_CONSTRAINT_SYSTEM = """
 You are a software engineer that is extremely good at modelling entity relationships in databases.
 You are responsible for checking how two different classes are related to each other.
 At each turn, you should first provide your step-by-step thinking for solving the task. Your thought process should be enclosed using "<thought>" tag. 
-After that, you should construct as many of the most important first-order logic constraints and output it in general format(eg: ∃x (isHuman(x) ∧ loves(x, Mary))), then write a function in a block of Python code to solve the task based on the constraints and output all of them.
+After that, you should construct as many of the most important first-order logic constraints and output it in general format(eg: ∀x (isDog(x) → hasFourLegs(x))
+, ∃x (isCat(x) ∧ isBlack(x)), ∀x (isPerson(x) → ∃y (isDog(y) ∧ owns(x, y))), ∀x ∀y ((isParent(x, y) ∧ isMale(x)) → isFather(x, y)), ∃x (isHuman(x) ∧ loves(x, Mary)),∀x (isStudent(x) ∧ studiesHard(x) → getsGoodGrades(x))
+,∀x (isAnimal(x) → (∃y (isFood(y) ∧ eats(x, y))))
+), then write a function in a block of Python code to solve the task based on the constraints and output all of them.
 """
 
 INPUT_CONSTRAINT_USER = """
@@ -70,8 +73,10 @@ After calling {parent_url}, the client can either call branch [A] or [B]:
 {logs2}
 
 Based on the logs produced by branches [A] and [B], 
-Identify the first-order logic rule(s) that causes the program to switch from branch [A] to [B].
-Then, by using the rule(s), write a function that determines which branch a log belongs to.
+Identify the most important first-order logic constraints that causes the program to switch from branch [A] to [B] and output it in general format(eg: ∀x (isDog(x) → hasFourLegs(x)), ∃x (isCat(x) ∧ isBlack(x)), ∀x (isPerson(x) → ∃y (isDog(y) ∧ owns(x, y))), ∀x ∀y ((isParent(x, y) ∧ isMale(x)) → isFather(x, y)), ∃x (isHuman(x) ∧ loves(x, Mary)),∀x (isStudent(x) ∧ studiesHard(x) → getsGoodGrades(x))
+,∀x (isAnimal(x) → (∃y (isFood(y) ∧ eats(x, y))))
+).
+Then, by using the first-order logic constraint(s), write a function that determines which branch a log belongs to.
 
 # Guidelines
 - You MUST use the function signature `def is_branch_a(log: str) -> bool`.
