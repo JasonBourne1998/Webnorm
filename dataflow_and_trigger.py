@@ -1,6 +1,6 @@
 import re
 import json
-from collections import defaultdict
+from collections import defaultdict,deque
 import time
 
 # 定义日志的正则表达式模式
@@ -71,21 +71,35 @@ def match_logs_with_tasks(index_logs, tasks):
     print("e4343",expanded_seed_logs)
     time.sleep(3)
     for index, group in index_logs:
-        if index in {2}:
+        # if index in  {565}:
             # print(index,group)
             for task_name, seeds in tasks.items():
                 # if "trainticket_getorder_seeds" in task_name:
                     # print('login seeds',seeds)
                     FLAG = check_group_with_seeds(expanded_seed_logs[task_name],group)
                     if FLAG:
-                        sequence = tuple(f"{entry['method']}<{normalize_url(entry['url'])}" for entry in group)
-
+                        sequence = [f"{entry['method']}<{normalize_url(entry['url'])}" for entry in group]
+                        sequence = normalize_sequence(sequence)
+                        sequence = tuple(sequence)
                         print("the seq is:",index,sequence)
                         if sequence not in sequences[task_name]:
                             sequences[task_name].add(sequence)
                             group_indices[task_name].add(index)
 
     return group_indices
+
+def normalize_sequence(sequence):
+    api_pairs = [
+        ["/api/v1/orderservice/order/refresh", "/api/v1/orderOtherService/orderOther/refresh"],
+        ["/api/v1/travel2service/trips/left", "/api/v1/travelservice/trips/left"],
+        ["/api/v1/foodservice/foods/", "/api/v1/contactservice/contacts/account/", "/api/v1/assuranceservice/assurances/types"]
+    ]
+    sorted_entries = []
+    for pair in api_pairs:
+        for api in pair:
+            sorted_entries.extend([entry for entry in sequence if api in entry])
+    sorted_entries.extend([entry for entry in sequence if all(api not in entry for pair in api_pairs for api in pair)])
+    return sorted_entries
 
 def normalize_url(url):
     specific_apis = [
@@ -114,6 +128,41 @@ def remove_subsets(seed_sets):
                         seed_sets[keys[j]].remove(element)
     return seed_sets
 
+def issuperset(seqA,seqB):
+    print("eee",seqA,seqB)
+    for i in seqA:
+        if i not in seqB:
+            return False
+    for i in seqB:
+        if i not in seqA:
+            return False
+    return True
+
+def find_inconsistent_sequences(seeds_trace):
+    inconsistent_sequences = {}
+
+    for key, sequences in seeds_trace.items():
+        seen_types = []
+        if key not in inconsistent_sequences:
+            inconsistent_sequences[key] = []
+        for sequence in sequences:
+            sequence_types = set(entry.split('<')[1] for entry in sequence)
+            if not seen_types:
+                seen_types.append(sequence_types)
+                inconsistent_sequences[key].append(sequence)
+            else:
+                is_unique = False
+                for seen in seen_types:
+                    print('jfks',seen,sequence_types,issuperset(seen,sequence_types))
+                    if issuperset(seen,sequence_types):
+                        is_unique = True
+                        break
+                if is_unique:
+                    seen_types.append(sequence_types)    
+                    inconsistent_sequences[key].append(sequence)                
+
+    return inconsistent_sequences
+
 def main():
     log_lines = read_log_file(log_file_path)
     tasks = read_task_file(task_file_path)
@@ -122,7 +171,8 @@ def main():
     capture = False
     log_group = []
     group_index = 1
-
+    # idx = 0
+    
     # 读取并解析日志文件
     for line in log_lines:
         match = log_pattern.match(line)
@@ -138,7 +188,8 @@ def main():
             log_group.append(data)
 
     if log_group:
-        index_logs.append((group_index, log_group))
+        # idx += 1
+        index_logs.append(( group_index, log_group))
 
     group_indices = match_logs_with_tasks(index_logs, tasks)
 
@@ -146,12 +197,31 @@ def main():
         print("====")
         print(f"{task_name}: {indices}")
 
-
-
     # 执行函数
     result = remove_subsets(group_indices)
-    print(result)
-    
+    print("the res is:",result)
+    seeds_trace = {}
+    for i,j in result.items():
+        seeds_trace[i] = []
+        for k in j:
+            logset = []
+            sequence = []
+            print("---------",i,k)
+            for idx in index_logs[k-1][1]:
+                sequence.append(idx)
+            sequence = [f"{entry['method']}<{normalize_url(entry['url'])}" for entry in sequence]
+            # sequence = normalize_sequence(sequence)
+            # sequence = tuple(sequence)
+            print(f"==322232",sequence)
+            for trace in sequence:
+                if trace not in logset:
+                    logset.append(trace)
+            seeds_trace[i].append(logset)
+    common_sequences = find_inconsistent_sequences(seeds_trace)
+    print(common_sequences)
+
 
 if __name__ == "__main__":
     main()
+
+{'trainticket_search_seeds': [['GET</index.html', 'POST</api/v1/travelservice/trips/left', 'POST</api/v1/travel2service/trips/left']], 'trainticket_cancel_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'GET</api/v1/cancelservice/cancel/refound/', 'GET</api/v1/cancelservice/cancel/'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'GET</api/v1/cancelservice/cancel/refound/', 'GET</api/v1/cancelservice/cancel/'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh', 'GET</api/v1/cancelservice/cancel/refound/', 'GET</api/v1/cancelservice/cancel/']], 'trainticket_getorder_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh']], 'trainticket_change_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/travelservice/trips/left', 'POST</api/v1/travel2service/trips/left', 'POST</api/v1/rebookservice/rebook'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/travelservice/trips/left', 'POST</api/v1/travel2service/trips/left', 'POST</api/v1/rebookservice/rebook']], 'trainticket_getconsign_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'GET</api/v1/consignservice/consigns/account/'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'GET</api/v1/consignservice/consigns/account/']], 'trainticket_getcollect_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh']], 'trainticket_enter_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'GET</api/v1/executeservice/execute/execute/']], 'trainticket_getenter_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh']], 'trainticket_pay_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/inside_pay_service/inside_payment'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/inside_pay_service/inside_payment']], 'trainticket_consign_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'GET</api/v1/consignservice/consigns/order/', 'PUT</api/v1/consignservice/consigns'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh', 'PUT</api/v1/consignservice/consigns', 'GET</api/v1/consignservice/consigns/order/'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'GET</api/v1/consignservice/consigns/order/', 'PUT</api/v1/consignservice/consigns']], 'trainticket_preserve_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/travel2service/trips/left', 'POST</api/v1/travelservice/trips/left', 'GET</api/v1/assuranceservice/assurances/types', 'GET</api/v1/contactservice/contacts/account/', 'GET</api/v1/foodservice/foods/', 'POST</api/v1/preserveservice/preserve'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/travel2service/trips/left', 'POST</api/v1/travelservice/trips/left', 'GET</api/v1/assuranceservice/assurances/types', 'GET</api/v1/contactservice/contacts/account/', 'GET</api/v1/foodservice/foods/', 'POST</api/v1/preserveservice/preserve']], 'trainticket_login_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'GET</api/v1/userservice/users']], 'trainticket_collect_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'GET</api/v1/executeservice/execute/collected/'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh', 'GET</api/v1/executeservice/execute/collected/']], 'trainticket_advancedsearch_seeds': [['GET</index.html', 'POST</api/v1/travelplanservice/travelPlan/minStation']]}
