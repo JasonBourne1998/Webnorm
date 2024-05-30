@@ -4,8 +4,8 @@
     ],
     "trainticket_login_seeds": [
         [["POST</api/v1/users/login"],"client_login.html"],
-        [["GET</api/v1/userservice/users"],"admin.html"]
-    ],
+        [["GET</api/v1/userservice/users","POST</api/v1/orderOtherService/orderOther/refresh","POST</api/v1/orderservice/order/refresh"],["client_order_list.html","admin.html"]
+    ]],
     "trainticket_preserve_seeds": [
         [["POST</api/v1/users/login"],"client_login.html"],
         [["POST</api/v1/travelservice/trips/left","POST</api/v1/travel2service/trips/left"],"index.html"],

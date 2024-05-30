@@ -24,9 +24,7 @@ G.add_node('GET /api/v1/executeservice/execute/collected', description='Consign'
 G.add_node('POST /api/v1/rebookservice/updateorder', description='Update Order')
 G.add_node('POST /api/v1/inside_pay_service/inside_payment', description='Pay Ticket')
 G.add_node('POST /api/v1/rebookservice/rebook/difference', description='Pay Difference')
-G.add_node('GET /api/v1/adminorderservice/adminorder', description='GET Admin Order')
 G.add_node('GET /api/v1/userservice/users', description='GET Admin User')
-G.add_node('GET /api/v1/admintravelservice/admintravel', description='GET Admin Travel')
 
 G.add_edge('POST /api/v1/travel2service/trips/left', 'API2', database = "", condition='Condition1', dataflow='DataFlow1')
 G.add_edge('API2', 'API3', condition='Condition2', dataflow='DataFlow2')
