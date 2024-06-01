@@ -70,7 +70,7 @@
     "trainticket_adpreserve_seeds": [
         [["POST</api/v1/users/login"],"client_login.html"],
         [["POST</api/v1/travelplanservice/travelPlan/cheapest", "POST</api/v1/travelplanservice/travelPlan/quickest", "POST</api/v1/travelplanservice/travelPlan/minStation"],"client_adsearch.html"],
-        [["GET</api/v1/foodservice/foods/","GET</api/v1/contactservice/contacts/account/","GET</api/v1/assuranceservice/assurances/types"],"client_adsearch.html"],
+        [["GET</api/v1/foodservice/foods/","GET</api/v1/contactservice/contacts/account/","GET</api/v1/assuranceservice/assurances/types"],"client_ticket_collect.html"],
         [["POST</api/v1/preserveservice/preserve","Post</api/v1/preserveotherservice/preserveOther"],"client_ticket_book.html"]
     ]
 }

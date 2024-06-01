@@ -1,5 +1,5 @@
 import re
-from typing import Literal, Callable
+from typing import List, Tuple, Callable, Literal
 
 from openai import OpenAI
 from openai.types.chat import ChatCompletion
@@ -16,7 +16,7 @@ class GPTChecker:
             top_p: float,
             max_tokens: int,
             temperature: float,
-            turns: int = 5
+            turns: int = 3
         ) -> None:
         """
         GPT-based constraint checker for: (1) database, (2) input, (3) flow, and (4) commonsense contraints.
@@ -88,7 +88,7 @@ class GPTChecker:
                 fails=len(reasons),
                 reasons="\n".join([f"\t[{i}] {reason}" for i, reason in enumerate(reasons)])
             )
-
+            messages = []
             messages.append({"role": "assistant", "content": response})
             messages.append({"role": "user", "content": feedback})
 
@@ -149,6 +149,65 @@ class GPTChecker:
             messages.append({"role": "user", "content": feedback})
 
         return passed, code
+
+    @user
+    def check_data_relationship(
+        self,
+        logs: str,
+        traces: str
+    ):
+        """
+        Identify data flow relationships between APIs
+
+        Args:
+            logs: the combined logs
+
+        Return:
+            edges
+        """
+        task = DATA_RELATIONSHIP_USER.format(logs=logs,traces=traces)
+        messages = [
+            {"role": "system", "content": DATA_RELATIONSHIP_SYSTEM},
+            {"role": "user", "content": task}
+        ]
+        response = self._generate(messages)
+
+        thought_pattern = r"<thought>(.*)<\/thought>"
+        edge_pattern = r"<edge>(.*)<\/edge>"
+
+        thought = re.findall(thought_pattern, response, re.DOTALL)[0]
+        edges = re.findall(edge_pattern, response)
+
+        return True, edges
+    
+    @user
+    def check_trigger_relationship(
+        self,
+        code: str
+    ):
+        """
+        Identify trigger relationships between APIs
+
+        Args:
+            code: the combined frontend source code containing the API calls.
+
+        Return:
+            triggers
+        """
+        task = TRIGGER_RELATIONSHIP_USER.format(code=code)
+        messages = [
+            {"role": "system", "content": TRIGGER_RELATIONSHIP_SYSTEM},
+            {"role": "user", "content": task}
+        ]
+        response = self._generate(messages)
+
+        thought_pattern = r"<thought>(.*)<\/thought>"
+        trigger_pattern = r"<trigger>(.*)<\/trigger>"
+
+        thought = re.findall(thought_pattern, response, re.DOTALL)[0]
+        triggers = re.findall(trigger_pattern, response, re.DOTALL)
+
+        return True, triggers
 
     @user
     def check_commonsense_constraint(
@@ -243,6 +302,10 @@ class GPTChecker:
         # The `re.DOTALL` flag allows the dot `.` to match newline characters as well,
         # so the code inside backticks can span multiple lines.
         code = re.findall(code_pattern, response, re.DOTALL)[0]
-        thought =re.findall(thought_pattern, response, re.DOTALL)[0]
-
+        thought = ""
+        try:
+            thought = re.findall(thought_pattern, response, re.DOTALL)[0]
+        except:
+            pass
         return thought, code
+    

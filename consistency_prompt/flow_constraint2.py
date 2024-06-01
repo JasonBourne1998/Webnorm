@@ -36,3 +36,4 @@ result = checker.check_flow_constraint(
     logs1,
     logs2
 )
+print(result[1])

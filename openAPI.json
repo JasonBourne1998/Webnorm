@@ -1,7 +1,7 @@
 {
     "auth.service getToken":"Post /api/v1/users/login",
     "verifycode.service getImageCode":"Get /api/v1/verifycode/generate",
-    "user.service getAllUsers":"Get /api/v1/adminuserservice/users",
+    "user.service getAllUsers":"Get /api/v1/userservice/users",
     "contacts.service findContactsByAccountId":"Get /api/v1/contactservice/contacts/account",
     "foodsearch.service getAllFood":"Get /api/v1/foodservice/foods",
     "assurance.service getAllAssuranceTypes":"Get /api/v1/assuranceservice/assurances/types",
@@ -17,7 +17,7 @@
     "cancel.service cancelOrder":"Get /api/v1/cancelservice/cancel/",
     "execute.service ticketExecute":"Get /api/v1/executeservice/execute/execute",
     "consign.service queryByOrderId":"Get /api/v1/consignservice/consigns/order/",
-    "consign.service insertConsignRecord":"Put /api/v1/consignservice/consigns",
+    "consign.service updateConsignRecord":"Put /api/v1/consignservice/consigns",
     "consign.service queryByAccountId":"Get /api/v1/consignservice/consigns/account/",
     "execute.service ticketCollect":"Get /api/v1/executeservice/execute/collected",
     "travelplan.service getQuickest":"Post /api/v1/travelplanservice/travelPlan/quickest",

@@ -1,8 +1,11 @@
 import time
 import functools
 import logging
+import sys
 
-logging.basicConfig(level = logging.INFO)
+stdout_handler = logging.StreamHandler(sys.stdout)
+file_handler = logging.FileHandler('output.log')
+logging.basicConfig(level=logging.INFO, handlers=[file_handler, stdout_handler])
 logger = logging.getLogger()
 
 

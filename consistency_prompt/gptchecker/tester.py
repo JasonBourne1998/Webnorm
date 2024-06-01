@@ -3,18 +3,20 @@ import textwrap
 from typing import Callable
 
 from .logger import environment
+from typing import List, Tuple, Callable, Literal
 
+history = []
 
 class Tester:
     @classmethod
     @environment
     def test_input_constraint(
         self,
-        logs: list[str],
+        logs: List[str],
         class_name1: str,
         class_name2: str,
         function: Callable
-    ) -> tuple[bool, str]:
+    ) -> Tuple[bool, str]:
         REASON_TEMPLATE = """
         There should be one or more match(es) among entities [A] and [B] in the logs:
         Entity [A] ({class_name1}):
@@ -27,17 +29,41 @@ class Tester:
 
         Please try again.
         """
-        passed, fails, reason = False, 0, None
+        passed, fails, reason = False, 0, []
         objects1, objects2 = [], []
+        
+        if class_name1 == "None":
+            object = {}
+            for log in logs:
+                if "authorization" in log:
+                    pattern = r'authorization:"Bearer ([^"]+)"'
+                    match = re.search(pattern, log)
+                    if match:
+                        token = match.group(1)
+                        object["authorization"] = token
+            objects1.append(object)
+            
+        if class_name2 == "None":
+            object = {}
+            for log in logs:
+                if "authorization" in log:
+                    pattern = r'authorization:"Bearer ([^"]+)"'
+                    match = re.search(pattern, log)
+                    if match:
+                        token = match.group(1)
+                        object["authorization"] = token
+            objects2.append(object)
 
         for log in logs:
-            _, objects = self._log_to_dict(class_name1, log)
-            objects1 += objects
-            _, objects = self._log_to_dict(class_name2, log)
-            objects2 += objects
+            if logs.index(log) % 2 == 0:
+                _, objects = self._log_to_dict(class_name1, log)
+                objects1 += objects
+            if logs.index(log) % 2 != 0:
+                _, objects = self._log_to_dict(class_name2, log)
+                objects2 += objects
 
-        for object1 in objects1:
-            for object2 in objects2:
+        for i, object1 in enumerate(objects1):
+            for j, object2 in enumerate(objects2):
                 try:
                     if function(object1, object2): passed = True
                 except:
@@ -54,6 +80,7 @@ class Tester:
             fails = 1
 
         return passed, fails, reason
+
 
     @classmethod
     @environment
@@ -97,14 +124,16 @@ class Tester:
     @staticmethod
     def _log_to_dict(class_name: str, log: str) -> tuple[list[str], list[dict]]:
         """Extract the Class(key=value) substring from log and convert into a Python dict
-        """
+        """ 
         float_pattern = r"^[+-]?(\d*\.\d+|\d+\.\d*)$"
         integer_pattern = r"^[+-]?\d+$"
         object_pattern = fr"{class_name}\((.*?)\)"
         objects_str: list[str] = re.findall(object_pattern, log, re.DOTALL)
         objects: list[dict] = []
-
+        # print("343xs",objects_str,class_name,log,log in history)
+        # if log not in history:
         for object_str in objects_str:
+            # print("object_str",object_str)
             object = {}
             pairs = object_str.split(",")
             for pair in pairs:
@@ -113,6 +142,36 @@ class Tester:
                 if re.match(float_pattern, value): value = float(value)
                 elif re.match(integer_pattern, value): value = int(value)
                 object[key] = value
-            objects.append(object)
-
+                    
+            if "authorization" in log and object:
+                pattern = r'authorization:"Bearer ([^"]+)"'
+                match = re.search(pattern, log)
+                if match:
+                    print("insert token in obj")
+                    token = match.group(1)
+                    object["authorization"] = token
+            objects.append(object)   
+            history.append(log)
+            
+        if "string" in class_name.lower():
+            object = {}
+            pattern = r'[0-9a-fA-F-]{36}'
+            match = re.search(pattern, log)
+            if match and "authorization" in log:
+                if "string accountId orderId" in class_name:
+                    object[class_name.split("string")[2].strip()] = match.group(1)
+                object[class_name.split("string")[1].strip()] = match.group(0)
+                # objects.append(object)
+                pattern = r'authorization:"Bearer ([^"]+)"'
+                match = re.search(pattern, log)
+                if match:
+                    # print("insert token in obj")
+                    token = match.group(1)
+                    object["authorization"] = token
+                objects.append(object)
+            elif match and "authorization" not in log:
+                object[class_name.split("string")[1].strip()] = match.group(0)
+                objects.append(object)
+            history.append(log)
+            print("the objects",objects)
         return objects_str, objects

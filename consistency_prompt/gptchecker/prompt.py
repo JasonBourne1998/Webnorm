@@ -1,4 +1,56 @@
 ####################################
+# Data relationship
+####################################
+
+DATA_RELATIONSHIP_SYSTEM = """
+# Identity
+You are a software engineer that is extremely good at analyzing frontend code, understand its flow control and logic, and construct hierarchical call graphs.
+At each turn, you should first provide your step-by-step thinking for solving the task. Your thought process should be enclosed using "<thought>" tag.
+"""
+
+DATA_RELATIONSHIP_USER = """
+# Task
+This is the log after we run the same {traces} multiple times (Or only one time):
+
+{logs}
+
+Based on the logs, identify all traces with data dependency in a hierarchical order.
+A data dependency is a situation in which an service refers to the data of a preceding service.
+
+# Guidelines
+- You MUST use " > " to separate the parent and dependent traces
+- You MUST enclose each parent-dependent service with a "<edge>" tag
+- You MUST have as much coverage as possible
+- You MUST NOT HAVE repeated dependency in the answer
+- An example: <edge>class.method > class.method</edge>
+"""
+
+####################################
+# Trigger relationship
+####################################
+
+TRIGGER_RELATIONSHIP_SYSTEM = """
+# Identity
+You are a software engineer that is extremely good at analyzing frontend code, understand its flow control and logic, and construct hierarchical call graphs.
+At each turn, you should first provide your step-by-step thinking for solving the task. Your thought process should be enclosed using "<thought>" tag.
+"""
+
+TRIGGER_RELATIONSHIP_USER = """
+# Task
+Here is the concatenated code snippet with all API calls we are interested in:
+
+{code}
+
+Based on the code, identify all possible parent-child API call relationships in a hierarchical order.
+
+# Guidelines
+- You MUST use " > " to separate the parent and child APIs
+- You MUST enclose each parent-child API call with a "<trigger>" tag
+- Your solution must have as much coverage as possible
+- An example: <trigger>/api/version/service/parent > /api/version/service/child</trigger>
+"""
+
+####################################
 # Input constraint
 ####################################
 
@@ -6,11 +58,18 @@ INPUT_CONSTRAINT_SYSTEM = """
 # Identity
 You are a software engineer that is extremely good at modelling entity relationships in databases.
 You are responsible for checking how two different classes are related to each other.
-At each turn, you should first provide your step-by-step thinking for solving the task. Your thought process should be enclosed using "<thought>" tag. 
-After that, you should construct as many of the most important first-order logic constraints and output it in general format(eg: ∀x (isDog(x) → hasFourLegs(x))
-, ∃x (isCat(x) ∧ isBlack(x)), ∀x (isPerson(x) → ∃y (isDog(y) ∧ owns(x, y))), ∀x ∀y ((isParent(x, y) ∧ isMale(x)) → isFather(x, y)), ∃x (isHuman(x) ∧ loves(x, Mary)),∀x (isStudent(x) ∧ studiesHard(x) → getsGoodGrades(x))
-,∀x (isAnimal(x) → (∃y (isFood(y) ∧ eats(x, y))))
-), then write a function in a block of Python code to solve the task based on the constraints and output all of them.
+At each turn, you need to do THREE things:
+1. You SHOULD first provide your step-by-step thinking for solving the task. Your thought process should be enclosed using "<thought>" tag. 
+2. You SHOULD construct as many of the most important first-order logic constraints and output it in general format. Examples:
+    - ∀x (isDog(x) → hasFourLegs(x)
+    - ∃x (isCat(x) ∧ isBlack(x))
+    - ∀x (isPerson(x) → ∃y (isDog(y) ∧ owns(x, y)))
+    - ∀x ∀y ((isParent(x, y) ∧ isMale(x)) → isFather(x, y))
+    - ∃x (isHuman(x) ∧ loves(x, Mary)),
+    - ∀x (isStudent(x) ∧ studiesHard(x) → getsGoodGrades(x))
+    - ∀x (isAnimal(x) → (∃y (isFood(y) ∧ eats(x, y))))
+)
+3. You SHOULD write a function in a block of Python code to solve the task based on the constraints.
 """
 
 INPUT_CONSTRAINT_USER = """
@@ -39,12 +98,12 @@ Then, write a function that determines if instances of [A] and [B] are related t
 # Guidelines
 - You MUST treat an object instance as a dict in your function. 
 - You MUST use the function signature `def is_related(instance_A: dict, instance_B: dict) -> bool`.
-- YOU MUST use all attributes of [A] and [B] in your functio for matching. If an attribute is not helpful for matching, simply check if it exists.
+- YOU DONT HAVE TO use all attributes of [A] and [B] in your function for matching. If an attribute is not helpful for matching, you can OMIT it.
 - DO NOT output any code that is not related to the function, such as test cases.
 """
 
 INPUT_CONSTRAINT_FEEDBACK = """
-Your code failed {fails} test cases. Please try again.
+Your code failed {fails} test cases. There should be AT LEAST ONE MATCH. Please RELAX THE CONSTRAINTS to match instances from [A] to [B], and try again.
 
 {reasons}
 """
@@ -136,3 +195,5 @@ Your code failed {fails} test cases. Please try again.
 
 {reasons}
 """
+
+
