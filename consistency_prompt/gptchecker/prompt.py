@@ -91,7 +91,7 @@ Instances of both classes [A] and [B] can be found in these logs:
 Based on the logs, infer the possible relationships of attributes in [A] and [B] by referencing these common types of relationships:
 1. Foreign key: an attribute in an entity that references the primary key attribute in another entity, both attributes must be the same data type.
 2. Primary key: attribute(s) that can uniquely identify entities in an entity set.
-3. Matching: an attribute in an entity that must have the same value as an attribute in another entity, both attributes must be the same data type.
+3. Matching: an attribute(E.g: Price, ID) in an entity that must have the same value as an attribute in another entity, both attributes must be the same data type. (E.g: Price, ID)
 
 Then, write a function that determines if instances of [A] and [B] are related to each other using their attributes.
 
@@ -174,10 +174,10 @@ Based on the logs, infer the valid values for each field by referencing these co
 1. Data Type Check: can the string value be converted to a correct data type? (e.g., "0.0" -> float 0.0)
 2. Code Check: does the value fall within a valid list of values? (e.g., postal codes, country codes, NAICS industry codes)
 3. Range Check: does the value fall within a logical numerical range? (e.g., temperature, latitude, price).
-4. Format Check: does the value follow a predefined format? (e.g., UUID, email, phone number).
+4. Format Check: does the value follow a predefined format? (e.g., UUID, email).
 5. Consistency Check: are two or more values logically consistent with each other? (e.g., delivery date must be after shipping date).
 6. Presence Check: an important field shouldn't be left blank (e.g., userID).
-7. Length Check: does the value contain a correct number of characters? (e.g., password).
+7. Vulunerablity Check: Ensure strings are not vulnerable to injection type attacks (XSS, log4j, SQL injection, etc.).
 
 Then, write a function that determines if a value is valid for all the fields.
 

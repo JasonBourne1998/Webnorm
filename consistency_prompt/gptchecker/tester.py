@@ -61,14 +61,23 @@ class Tester:
             if logs.index(log) % 2 != 0:
                 _, objects = self._log_to_dict(class_name2, log)
                 objects2 += objects
-
-        for i, object1 in enumerate(objects1):
-            for j, object2 in enumerate(objects2):
-                try:
-                    if function(object1, object2): passed = True
-                except:
-                    continue
-
+        print("232",objects1,objects2)
+        if len(objects1) == 1 and len(objects2) == 1:
+            for i, object1 in enumerate(objects1):
+                for j, object2 in enumerate(objects2):
+                    try:
+                        if function(object1, object2): passed = True
+                    except Exception as e:
+                        print("the error is:",e,object1, object2)
+                        continue
+        else:
+            for i, object1 in enumerate(objects1):
+                for j, object2 in enumerate(objects2):
+                    try:
+                        if function(object1, object2): passed = True
+                    except Exception as e:
+                        print('the errorlist is:',e,object1, object2)
+                        continue
         if not passed:
             reason = textwrap.dedent(REASON_TEMPLATE)
             reason = reason.format(
@@ -78,7 +87,7 @@ class Tester:
                 objects2="\n".join(f"[B{i}] {object}" for i, object in enumerate(objects2))
             )
             fails = 1
-
+            # print("the reason is:",reason)
         return passed, fails, reason
 
 
@@ -111,6 +120,7 @@ class Tester:
         passed, fails, reasons = True, 0, []
         for log in logs:
             objects_str, objects = self._log_to_dict(class_name, log)
+            # print(objects_str, objects)
             for object_str, object in zip(objects_str, objects):
                 try:
                     function(object)
@@ -137,17 +147,33 @@ class Tester:
             object = {}
             pairs = object_str.split(",")
             for pair in pairs:
-                key, value = pair.split("=")
+                if "consigneeName" in pair:
+                    key, value = "consigneeName",pair.split("consigneeName=")[1]
+                elif "consigneePhone" in pair:
+                    # print('the pais',pair,pair.split("consigneePhone="))
+                    key, value = "consigneePhone",str(pair.split("consigneePhone=")[1])
+                elif "documentNumber" in pair:
+                    key, value = "documentNumber",str(pair.split("documentNumber=")[1])
+                elif "name=<script>location.href=" in pair:
+                    key, value = "name",str(pair.split("name=")[1])
+                elif "name=<div style=" in pair:
+                    key, value = "name",str(pair.split("name=")[1])
+                elif "phoneNumber=" in pair:
+                    key, value = "phoneNumber",str(pair.split("phoneNumber=")[1])
+                elif "foodName=" in pair:
+                    key, value = "foodName",str(pair.split("foodName=")[1])
+                else:
+                    key, value = pair.split("=")
                 key, value = key.strip(), value.strip()
                 if re.match(float_pattern, value): value = float(value)
-                elif re.match(integer_pattern, value): value = int(value)
+                elif re.match(integer_pattern, value) and "consigneePhone" not in key and "phoneNumber" not in key  and "password" not in key and "phone" not in key and "price" not in key: value = int(value)
                 object[key] = value
                     
             if "authorization" in log and object:
                 pattern = r'authorization:"Bearer ([^"]+)"'
                 match = re.search(pattern, log)
                 if match:
-                    print("insert token in obj")
+                    # print("insert token in obj")
                     token = match.group(1)
                     object["authorization"] = token
             objects.append(object)   
@@ -173,5 +199,6 @@ class Tester:
                 object[class_name.split("string")[1].strip()] = match.group(0)
                 objects.append(object)
             history.append(log)
-            print("the objects",objects)
+            # print("the objects",objects)
+        # print('the objects is:',objects)
         return objects_str, objects
