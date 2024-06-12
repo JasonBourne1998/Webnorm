@@ -53,15 +53,23 @@ class Tester:
                         token = match.group(1)
                         object["authorization"] = token
             objects2.append(object)
-
-        for log in logs:
-            if logs.index(log) % 2 == 0:
-                _, objects = self._log_to_dict(class_name1, log)
-                objects1 += objects
-            if logs.index(log) % 2 != 0:
-                _, objects = self._log_to_dict(class_name2, log)
-                objects2 += objects
-        print("232",objects1,objects2)
+        if "Order" not in class_name1:
+            for log in logs:
+                if logs.index(log) % 2 == 0:
+                    _, objects = self._log_to_dict(class_name1, log)
+                    objects1 += objects
+                if logs.index(log) % 2 != 0:
+                    _, objects = self._log_to_dict(class_name2, log)
+                    objects2 += objects
+        else:
+            for log in logs:
+                if logs.index(log) != len(logs)-1:
+                    _, objects = self._log_to_dict(class_name1, log)
+                    objects1 += objects
+                else:
+                    _, objects = self._log_to_dict(class_name2, log)
+                    objects2 += objects
+        # print("232",objects1,objects2)
         if len(objects1) == 1 and len(objects2) == 1:
             for i, object1 in enumerate(objects1):
                 for j, object2 in enumerate(objects2):
@@ -76,7 +84,7 @@ class Tester:
                     try:
                         if function(object1, object2): passed = True
                     except Exception as e:
-                        print('the errorlist is:',e,object1, object2)
+                        # print('the errorlist is:',e,object1, object2)
                         continue
         if not passed:
             reason = textwrap.dedent(REASON_TEMPLATE)
@@ -100,6 +108,7 @@ class Tester:
         function: Callable
     ) -> tuple[bool, list[str]]:
         passed, fails, reasons = True, 0, []
+        # print("the logs asfhjfh",logs,branches,function)
         for log, expected in zip(logs, branches):
             actual = function(log)
             if actual != expected:
@@ -130,6 +139,57 @@ class Tester:
                     reasons.append(F"Expected: True | Actual: False | Test case: {object_str} | Reason: {e}")
 
         return passed, fails, reasons
+    
+    @classmethod
+    @environment
+    def test_database_constraint(
+        self,
+        logs1: list[str],
+        logs2: list[str],
+        class_name: str,
+        function: Callable
+    ) -> tuple[bool, list[str]]:
+        REASON_TEMPLATE = """
+        No instances should have inconsistencies in these logs as they are ground truth, please relax your constraint and  try again.
+        Event 1 instances:
+        
+        {objects1}
+
+        Event 2 instances:
+
+        {objects2}
+
+        Please try again.
+        """
+        
+        passed, fails, reason = False, 0, []
+
+        event1 = []        
+        for log in logs1:
+            _, objects = self._log_to_dict(class_name, log)
+            event1 += objects
+            
+        event2 = []        
+        for log in logs2:
+            _, objects = self._log_to_dict(class_name, log)
+            event2 += objects
+                
+        for i, object1 in enumerate(event1):
+            for j, object2 in enumerate(event2):
+                try:
+                    if function(object1, object2): passed = True
+                except Exception as e:
+                    continue
+                    
+        if not passed:
+            fails = 1
+            reason = textwrap.dedent(REASON_TEMPLATE)
+            reason = reason.format(
+                objects1="\n".join(f"[A{i}] {object}" for i, object in enumerate(event1)),
+                objects2="\n".join(f"[B{i}] {object}" for i, object in enumerate(event2))
+            )
+
+        return passed, fails, reason
     
     @staticmethod
     def _log_to_dict(class_name: str, log: str) -> tuple[list[str], list[dict]]:
@@ -168,7 +228,12 @@ class Tester:
                 if re.match(float_pattern, value): value = float(value)
                 elif re.match(integer_pattern, value) and "consigneePhone" not in key and "phoneNumber" not in key  and "password" not in key and "phone" not in key and "price" not in key: value = int(value)
                 object[key] = value
-                    
+            if "orderMoneyDifference" in log and object:
+                match = re.search(r"orderMoneyDifference=([0-9]+\.[0-9]+)", log)
+                if match:
+                    order_money_difference = float(match.group(1))
+                    object["orderMoneyDifference"] = order_money_difference
+                    print("the obj is:",object)
             if "authorization" in log and object:
                 pattern = r'authorization:"Bearer ([^"]+)"'
                 match = re.search(pattern, log)

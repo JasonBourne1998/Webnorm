@@ -12,7 +12,7 @@ dataflow = """
 #login_seeds: [] 52s
 # cancel_seeds: ['verifycode.service.impl.VerifyCodeServiceImpl.getImageCode > auth.service.impl.TokenServiceImpl.getToken', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'order.service.OrderServiceImpl.queryOrdersForRefresh > cancel.service.CancelServiceImpl.calculateRefund', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > cancel.service.CancelServiceImpl.calculateRefund'] 9.6909s
 #['auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh'] 19.0419 seconds
-# Change ['auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > travel.service.TravelServiceImpl.queryByBatch', 'auth.service.impl.TokenServiceImpl.getToken > travel2.service.TravelServiceImpl.queryByBatch', 'auth.service.impl.TokenServiceImpl.getToken > rebook.service.RebookServiceImpl.rebook'] 20.95
+# Change ['auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > travel.service.TravelServiceImpl.queryByBatch', 'auth.service.impl.TokenServiceImpl.getToken > travel2.service.TravelServiceImpl.queryByBatch', 'auth.service.impl.TokenServiceImpl.getToken > rebook.service.RebookServiceImpl.rebook', 'travel.service.TravelServiceImpl.queryByBatch > rebook.service.RebookServiceImpl.rebook','rebook.service.RebookServiceImpl.rebook > inside_payment.service.InsidePaymentServiceImpl.payDifference'] 20.95
 #getConsign['auth.service.impl.TokenServiceImpl.getToken > consign.service.ConsignServiceImpl.queryByAccountId'] 11.62
 #getCollect['verifycode.service.impl.VerifyCodeServiceImpl.getImageCode > auth.service.impl.TokenServiceImpl.getToken', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh'] 13.8993
 #Enter['auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > execute.service.ExecuteServiceImpl.ticketExecute', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > execute.service.ExecuteServiceImpl.ticketExecute','order.service.OrderServiceImpl.queryOrdersForRefresh > execute.service.ExecuteServiceImpl.ticketExecute', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > execute.service.ExecuteServiceImpl.ticketExecute'] 15.6334
@@ -129,7 +129,7 @@ def match_logs_with_tasks(index_logs, tasks):
         # if index in {331, 372, 37}:
             # print(index,group)
             for task_name, seeds in tasks.items():
-                # if "trainticket_getorder_seeds" in task_name:
+                if "trainticket_change_seeds" in task_name:
                     # print('login seeds',seeds)
                     FLAG = check_group_with_seeds(expanded_seed_logs[task_name],group)
                     if FLAG:
@@ -528,15 +528,17 @@ def main():
 
     print("unique_matches",unique_matches,len(unique_matches))
     # time.sleep(432)
-    for disp_match in unique_matches:
+    for i, disp_match in enumerate(unique_matches):
+        # if i >= 10: break
         start,end = disp_match.split(">")
         print("the start and end",start,end)
         start_API,end_API = API_service[start.strip()], API_service[end.strip()]
         print("the start and end API",start_API,end_API)
         totallog1s = []
         totallog2s = []
+        # print(disp_match)
         # if "order.service.OrderServiceImpl.queryOrdersForRefresh" in start.strip() and "consign.service.ConsignServiceImpl.queryByOrderId" in end.strip():
-        if disp_match in [ 'foodsearch.service.FoodServiceImpl.getAllFood > preserve.service.PreserveServiceImpl.preserve'] :
+        if disp_match in ["auth.service.impl.TokenServiceImpl.getToken > execute.service.ExecuteServiceImpl.ticketExecute"]:
             try:
                 for seeds_name, sequence in common_sequences.items(): 
                     for idx,seq in sequence:

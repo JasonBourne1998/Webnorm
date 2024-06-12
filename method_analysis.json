@@ -5864,7 +5864,6 @@
             "method_name": "queryByBatch",
             "invocations": [
                 "queryByBatch",
-                "query",
                 "getTicketsByBatch"
             ],
             "rest_template_calls": [],
@@ -5878,17 +5877,11 @@
                     "method_name": "getTickets",
                     "url": "/api/v1/basicservice/basic/travel",
                     "http_method": "POST"
-                },
-                {
-                    "method_name": "getTicketsByBatch",
-                    "url": "/api/v1/basicservice/basic/travels",
-                    "http_method": "POST"
                 }
             ],
             "service_methods": [
                 "seatService.getLeftTicketOfInterval",
-                "service.queryForTravel",
-                "service.queryForTravels"
+                "service.queryForTravel"            
             ]
         },
         "query": {

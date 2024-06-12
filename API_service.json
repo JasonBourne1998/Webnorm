@@ -22,5 +22,6 @@
     "execute.service.ExecuteServiceImpl.ticketCollect":"GET</api/v1/executeservice/execute/collected/",
     "travelplan.service.TravelPlanServiceImpl.getQuickest":"POST</api/v1/travelplanservice/travelPlan/quickest",
     "travelplan.service.TravelPlanServiceImpl.getCheapest":"POST</api/v1/travelplanservice/travelPlan/cheapest",
-    "travelplan.service.TravelPlanServiceImpl.getMinStation":"POST</api/v1/travelplanservice/travelPlan/minStation"
+    "travelplan.service.TravelPlanServiceImpl.getMinStation":"POST</api/v1/travelplanservice/travelPlan/minStation",
+    "inside_payment.service.InsidePaymentServiceImpl.payDifference":"POST</api/v1/inside_pay_service/inside_payment/difference"
 }

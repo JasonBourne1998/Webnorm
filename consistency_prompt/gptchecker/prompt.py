@@ -98,8 +98,10 @@ Then, write a function that determines if instances of [A] and [B] are related t
 # Guidelines
 - You MUST treat an object instance as a dict in your function. 
 - You MUST use the function signature `def is_related(instance_A: dict, instance_B: dict) -> bool`.
+- You SHOULD return True if all checks passed, otherwise, raise Error on the specific violation with a detailed message.
 - YOU DONT HAVE TO use all attributes of [A] and [B] in your function for matching. If an attribute is not helpful for matching, you can OMIT it.
 - DO NOT output any code that is not related to the function, such as test cases.
+
 """
 
 INPUT_CONSTRAINT_FEEDBACK = """
@@ -132,9 +134,16 @@ After calling {parent_url}, the client can either call branch [A] or [B]:
 {logs2}
 
 Based on the logs produced by branches [A] and [B], 
-Identify the most important first-order logic constraints that causes the program to switch from branch [A] to [B] and output it in general format(eg: ∀x (isDog(x) → hasFourLegs(x)), ∃x (isCat(x) ∧ isBlack(x)), ∀x (isPerson(x) → ∃y (isDog(y) ∧ owns(x, y))), ∀x ∀y ((isParent(x, y) ∧ isMale(x)) → isFather(x, y)), ∃x (isHuman(x) ∧ loves(x, Mary)),∀x (isStudent(x) ∧ studiesHard(x) → getsGoodGrades(x))
-,∀x (isAnimal(x) → (∃y (isFood(y) ∧ eats(x, y))))
-).
+Identify the variable name(s) that influence branching (e.g., Keyword: [role, userId])
+Then, by using the variable name(s), construct the most important first-order logic constraints that causes the program to switch from branch [A] to [B] and output it in general format:
+- ∀x (isDog(x) → hasFourLegs(x))
+- ∃x (isCat(x) ∧ isBlack(x))
+- ∀x (isPerson(x) → ∃y (isDog(y) ∧ owns(x, y)))
+- ∀x ∀y ((isParent(x, y) ∧ isMale(x)) → isFather(x, y))
+- ∃x (isHuman(x) ∧ loves(x, Mary))
+- ∀x (isStudent(x) ∧ studiesHard(x) → getsGoodGrades(x))
+- ∀x (isAnimal(x) → (∃y (isFood(y) ∧ eats(x, y))))
+
 Then, by using the first-order logic constraint(s), write a function that determines which branch a log belongs to.
 
 # Guidelines
@@ -196,4 +205,47 @@ Your code failed {fails} test cases. Please try again.
 {reasons}
 """
 
+####################################
+# Database Constraint
+####################################
 
+DATABASE_CONSTRAINT_SYSTEM = """
+# Identity
+You are a software engineer that is extremely good at finding differences.
+You are responsible for writing functions to validate the consistency of an object at different application stages.
+At each turn, you should first provide your step-by-step thinking for solving the task. Your thought process should be enclosed using "<thought>" tag.
+After that, you should use write a function in a block of Python code to solve the task.
+"""
+
+DATABASE_CONSTRAINT_USER = """
+# Task
+This is a {class_name} class with multiple fields:
+
+{class_definition}
+
+At application event 1, instances of this class can be found in these logs:
+
+{logs1}
+
+At application event 2, instances of this class can be found in these logs:
+
+{logs2}
+
+Using logs from appliction event 1 as before; event 2 as after, identify any illegal modifications of class instances.
+For example, for objects of the same ID, the values of certain data fields should be unchanged across application events.
+Then, write a function that checks if an instance before event 1 (a1) is consistent after event 2 (a2).
+
+# Guidelines
+- You MUST treat an object instance as a dict in your function. 
+- You MUST use the function signature `def is_consistent(a1: dict, a2: dict) -> bool`.
+- You SHOULD return True if two instances are referencing the same entity (e.g., same ID) and are consistent
+- You SHOULD raise Error with a detailed message if two instances are referencing the same entity but are inconsistent (e.g., illegal modifications)
+- You SHOULD return False if two instance are not referencing the same entity (e.g., different ID)
+- DO NOT output any code that is not related to the function, such as test cases.
+"""
+
+DATABASE_CONSTRAINT_FEEDBACK = """
+Your code failed {fails} test cases. Please try again.
+
+{reasons}
+"""
