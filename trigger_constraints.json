@@ -1,7 +1,0 @@
-{
-    "findByUsername > order.service.OrderServiceImpl.queryOrdersForRefresh": "def is_branch_a(log: str) -> bool:\n    return 'roles=[ROLE_USER]' in log\n",
-    "findByUsername > order.service.OrderOtherServiceImpl.queryOrdersForRefresh": "def is_branch_a(log: str) -> bool:\n    return 'roles=[ROLE_USER]' in log\n",
-    "findByUsername > user.service.impl.UserServiceImpl.getAllUsers": "def is_branch_a(log: str) -> bool:\n    return 'roles=[ROLE_ADMIN]' in log\n",
-    "rebook.service.RebookServiceImpl.rebook > rebook.service.RebookServiceImpl.paydifference": "def is_branch_a(log: str) -> bool:\n    # Check if the log contains \"differenceMoney\"\n    if \"differenceMoney=\" in log:\n        # Check if the log contains \"differenceMoney=0.0\"\n        if \"differenceMoney=0.0\" in log:\n            return False\n        return True\n    return False\n",
-    "rebook.service.RebookServiceImpl.rebook > rebook.service.RebookServiceImpl.updateorder": "def is_branch_a(log: str) -> bool:\n    # Check if the log contains \"differenceMoney\"\n    if \"differenceMoney=\" in log:\n        # Check if the log contains \"differenceMoney=0.0\"\n        if \"differenceMoney=0.0\" in log:\n            return True\n        return True\n    return False\n"
-}
