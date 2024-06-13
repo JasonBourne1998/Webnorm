@@ -1,0 +1,7 @@
+*.txt
+__pychache__
+*.log
+NiceFish
+*yml
+commonsense.py
+rest_exchange.py
