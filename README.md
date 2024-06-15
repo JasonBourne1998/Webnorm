@@ -44,26 +44,29 @@ In our Webnorm, we build a consrtaint-based log anomaly detection framework:
 ## Project structure
 
 <pre>
-scripts/ 
-├── infer/
-│   └──test.py             # inference script
-├── train/
-│   └──train.py             # training script for the CRP transition model (a CLIP model)
-├── pipeline/             
-│   └──test_llm.py # TestLLM class
-├── data/ # data utilities
-└── utils/ # other utitiles such as web interaction utility functions 
-
-experiments/
-├── ablation_study/ # ablation study in RQ2 and public phishing study in RQ4
-├── componentwise_evaluation/ # component-wise evaluation experiments in RQ2, RQ3
-└── field_study/ # Large/Small-scale field study in RQ4
-
-prompts/ 
-├── brand_recog_prompt.json 
-└── crp_pred_prompt.json
-
-server/ # deployment scripts to deploy PhishLLM demo website
+├── Anomaly_detect.py  # Anomaly detection
+├── consistency_prompt
+│   ├── examples # Constraint-learning Examples
+│   ├── gptchecker
+│   │   ├── gpt.py
+│   │   ├── __init__.py
+│   │   ├── logger.py
+│   │   ├── prompt.py # Constraint-learning prompt
+│   │   └── tester.py # Constraint-learning verifycation
+│   └── README.md
+├── Event_graph
+│   ├── API_logs_define.py
+│   ├── backend_API.py
+│   ├── code_database.py # Construct the database sharing
+│   ├── dataflow_and_trigger.py # Construct the dataflow and trigger condition
+│   ├── Event_graph.py 
+│   └── trigger_code_parse.py
+├── Log_Instrument
+│   ├── config_templates.py
+│   ├── deleteLogs.py  # Delete the original logs 
+│   ├── Instrumentation.py # Instrument with AOP
+├── README.md
+└── setup.sh
 </pre>
 
 ## Setup
@@ -106,7 +109,7 @@ testing_dir/
 ## Inference: Run Webnorm 
 ```bash
   conda activate webnorm
-  python3 Anomaly.py
+  python3 Anomaly_detection.py
 ```
 
 <!-- ## Understand the Output
