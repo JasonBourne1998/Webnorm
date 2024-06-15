@@ -1,0 +1,6 @@
+*.txt
+__pychache__
+*.log
+NiceFish
+*yml
+.env
