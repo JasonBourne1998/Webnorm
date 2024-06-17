@@ -165,6 +165,7 @@ public class LoggingAspect {{
     
             StringBuilder logBuilder = new StringBuilder();
             logBuilder.append("Execution of repository method: ").append(methodName);
+            logBuilder.append(", Arguments: ").append(Arrays.toString(joinPoint.getArgs()));
             logBuilder.append(", Execution Time: ").append(elapsedTime).append(" milliseconds");
             logBuilder.append(", Result: ").append(result);
     
