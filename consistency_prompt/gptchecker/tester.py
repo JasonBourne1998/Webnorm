@@ -110,8 +110,10 @@ class Tester:
         passed, fails, reasons = True, 0, []
         # print("the logs asfhjfh",logs,branches,function)
         for log, expected in zip(logs, branches):
-            actual = function(log)
-            if actual != expected:
+            try:
+                actual = function(log)
+            except:
+                actual = not expected
                 fails += 1
                 passed = False
                 reasons.append(F"Expected: {expected} | Actual: {actual} | Test case: {log}")

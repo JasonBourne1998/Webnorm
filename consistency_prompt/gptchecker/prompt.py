@@ -37,14 +37,14 @@ At each turn, you should first provide your step-by-step thinking for solving th
 
 TRIGGER_RELATIONSHIP_USER = """
 # Task
-Here is the concatenated code snippet with all API calls we are interested in:
+Here is the concatenated code snippet with the {traces} we are interested in:
 
 {code}
 
 Based on the code, identify all possible parent-child API call relationships in a hierarchical order.
 
 # Guidelines
-- You MUST use " > " to separate the parent and child APIs
+- You MUST use " > " to separate the parent and child APIs in the {traces}
 - You MUST enclose each parent-child API call with a "<trigger>" tag
 - Your solution must have as much coverage as possible
 - An example: <trigger>/api/version/service/parent > /api/version/service/child</trigger>
@@ -147,7 +147,8 @@ Then, by using the variable name(s), construct the most important first-order lo
 Then, by using the first-order logic constraint(s), write a function that determines which branch a log belongs to.
 
 # Guidelines
-- You MUST use the function signature `def is_branch_a(log: str) -> bool`.
+- You MUST use the function signature `def is_branch_a(log: str) -> bool` for [{parent_url}->{child_url1}] and `def is_branch_b(log: str) -> bool` for [{parent_url}->{child_url2}].
+- You SHOULD return True if ALL checks passed, otherwise, raise Error on the specific violation including the correct child_url and the trigger parameter(E.g: raise ValueError(f"should belong to /api/v1/url due to parameter condition")).
 - DO NOT output any code that is not related to the function, such as test cases.
 """
 
@@ -200,7 +201,7 @@ Then, write a function that determines if a value is valid for all the fields.
 """
 
 COMMONSENSE_CONSTRAINT_FEEDBACK = """
-Your code failed {fails} test cases. Please try again.
+Your code failed {fails} test cases. Please delete the condition which causes the error. 
 
 {reasons}
 """

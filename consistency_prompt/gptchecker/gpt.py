@@ -194,11 +194,15 @@ class GPTChecker:
             thought, code = self._parse_response(response)
 
             exec(code, globals())
-            target_function: Callable = globals()["is_branch_a"]
+            is_branch_a: Callable = globals().get("is_branch_a")
+            is_branch_b: Callable = globals().get("is_branch_b")
 
-            passed1, fails1, reasons1 = Tester.test_flow_constraint(logs1, [True] * len(logs1), target_function)
-            passed2, fails2, reasons2 = Tester.test_flow_constraint(logs2, [False] * len(logs2), target_function)
-            passed = passed1 & passed2
+            if not is_branch_a or not is_branch_b:
+                raise ValueError("Generated code did not contain 'is_branch_a' or 'is_branch_b'")
+
+            passed1, fails1, reasons1 = Tester.test_flow_constraint(logs1, [True] * len(logs1), is_branch_a)
+            passed2, fails2, reasons2 = Tester.test_flow_constraint(logs2, [False] * len(logs2), is_branch_b)
+            passed = passed1 and passed2
             reasons = reasons1 + reasons2
             if passed: break
 
@@ -244,6 +248,7 @@ class GPTChecker:
     @user
     def check_trigger_relationship(
         self,
+        traces: str,
         code: str
     ):
         """
@@ -255,7 +260,7 @@ class GPTChecker:
         Return:
             triggers
         """
-        task = TRIGGER_RELATIONSHIP_USER.format(code=code)
+        task = TRIGGER_RELATIONSHIP_USER.format(traces=traces,code=code)
         messages = [
             {"role": "system", "content": TRIGGER_RELATIONSHIP_SYSTEM},
             {"role": "user", "content": task}
