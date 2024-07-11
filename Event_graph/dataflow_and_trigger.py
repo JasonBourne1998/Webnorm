@@ -1,22 +1,23 @@
 import re
 import json
-from collections import defaultdict,deque
+from collections import defaultdict, deque
 import time
 from datetime import datetime
 import sys
+import os
+from dotenv import load_dotenv
+import argparse
+
 sys.path.append('../consistency_prompt/examples')
 sys.path.append('../consistency_prompt')
 import data_relationship
 import ast
 from gptchecker import GPTChecker
-import os
-from dotenv import load_dotenv
 
 # 加载 .env 文件
 env_path = '../consistency_prompt/.env'
 load_dotenv(dotenv_path=env_path)
 api_key = os.getenv('API_KEY')
-
 
 dataflow = """
 #trainticket_login_seeds: ['verifycode.service.impl.VerifyCodeServiceImpl.getImageCode > auth.service.impl.TokenServiceImpl.getToken', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh','auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh','auth.service.impl.TokenServiceImpl.getToken > user.service.impl.UserServiceImpl.getAllUsers'] 52s
@@ -37,7 +38,6 @@ dataflow = """
 
 dataflowFLAG = False
 TriggerflowFLAG = True
-
 
 # 定义日志的正则表达式模式
 log_pattern = re.compile(
@@ -79,38 +79,29 @@ def read_task_file(file_path):
         return json.load(file)
 
 # 检查日志组是否符合种子模板
-def check_group_with_seeds(expanded_seed_logs,group):
-    group_logs = [[f"{entry['method']}<{entry['url']}", entry['referer'].split("32677/")[1].split("?")[0]] for entry in group if ("/index.html" not in entry['url'] and "/api/v1/verifycode/generate" not in entry['url'])]
-    # print("fjkaf",len(group_logs),group_logs[-1],len(expanded_seed_logs),expanded_seed_logs)
-    if len(group_logs) >= len(expanded_seed_logs) and ("foodservice" not in group_logs[-1][0]) and ("contact" not in group_logs[-1][0] ):
-        for api in group_logs:
-            FLAG = False
-            # print("new",api)
-                
-            for expanded_seed_l in expanded_seed_logs:
-                # print(expanded_seed_l)
-                if len(expanded_seed_l[0]) == 1:
-                    # print("4331",api, expanded_seed_l[0],expanded_seed_l[1])
-                    if expanded_seed_l[0][0] in api[0] and expanded_seed_l[1] in api[1]:
+def check_group_with_seeds(expanded_seed_logs, group):
+    group_logs = [[f"{entry['method']}<{entry['url']}", entry['referer'].split("32677/")[1].split("?")[0]] 
+                  for entry in group if ("/index.html" not in entry['url'] and "/api/v1/verifycode/generate" not in entry['url'])]
+    
+    if len(group_logs) < len(expanded_seed_logs) or ("foodservice" in group_logs[-1][0]) or ("contact" in group_logs[-1][0]):
+        return False
+    
+    for api in group_logs:
+        FLAG = False
+        for expanded_seed_l in expanded_seed_logs:
+            for seed_log in expanded_seed_l[0]:
+                if isinstance(expanded_seed_l[1], str):
+                    if seed_log in api[0] and expanded_seed_l[1] in api[1]:
                         FLAG = True
                         break
                 else:
-                    # print("433",api, expanded_seed_l[0],expanded_seed_l[1])
-                    for seed_log in expanded_seed_l[0]:
-                        if type(expanded_seed_l[1]) == str:
-                            if seed_log in api[0] and expanded_seed_l[1] in api[1]:
-                                FLAG = True
-                                break
-                        else:
-                            # print("login",seed_log,expanded_seed_l[1])
-                            for path in expanded_seed_l[1]:
-                                if seed_log in api[0] and path in api[1]:
-                                    FLAG = True
-                                    break
-            if not FLAG:
-                return False
-        return True
-    else: return False
+                    if any(seed_log in api[0] and path in api[1] for path in expanded_seed_l[1]):
+                        FLAG = True
+                        break
+        if not FLAG:
+            return False
+    return True
+
 
 # 记录符合条件的序列
 def match_logs_with_tasks(index_logs, tasks):
@@ -206,15 +197,13 @@ def issuperset(seqA,seqB):
             return False
     return True
 
-def match_log_with_api(log_entry):
+def match_log_with_api(log_entry):    
     """
     根据日志条目匹配相应的API定义
     """
-    method_url = f"{log_entry['method']} {log_entry['url']}"
-    for api_name, api_url in OPENAPI.items():
-        if api_url.lower() in method_url.lower():
-            return api_name
-    return None
+    method_url = f"{log_entry['method']} {log_entry['url']}".lower()
+    return next((api_name for api_name, api_url in OPENAPI.items() if api_url.lower() in method_url), None)
+
 
 def convert_to_datetime(timestamp_str):
     # 拆分日期和时间部分
@@ -234,23 +223,15 @@ def convert_to_datetime(timestamp_str):
     # print(final_datetime)
     return final_datetime
 
-def find_between_log(logs, startingtime,endingtime):
-    """
-    找到与目标时间戳最接近的日志条目
-    """
-    # print("tsjtkgjf",startingtime,endingtime)
-    closest_log = None
-    smallest_diff = float('inf')
+def find_between_log(logs, startingtime, endingtime):
+    log_timestamp1 = convert_to_datetime(startingtime)
+    log_timestamp2 = convert_to_datetime(endingtime)
     for log in logs:
         parsedlogs = parse_log(log)
-        if parsedlogs:
-            log_timestamp1 = convert_to_datetime(startingtime)
-            log_timestamp2 = convert_to_datetime(endingtime)
-            # if "preserveOther.service.PreserveOtherServiceImpl" in parsedlogs["class"]: print(parsedlogs["timestamp"],"==",log_timestamp1,log_timestamp2)
-            if (parsedlogs['timestamp'] - log_timestamp1).total_seconds() >= 0 and (parsedlogs['timestamp'] - log_timestamp2).total_seconds() <= 0:
-                closest_log = parsedlogs
-                break
-    return closest_log
+        if parsedlogs and log_timestamp1 <= parsedlogs['timestamp'] <= log_timestamp2:
+            return parsedlogs
+    return None
+
 
 def process_logs(logs, api_log_entry):
     """
@@ -282,28 +263,15 @@ def find_inconsistent_sequences(seeds_trace):
 
     for key, sequences in seeds_trace.items():
         seen_types = []
-        if key not in inconsistent_sequences:
-            inconsistent_sequences[key] = []
-        # print(sequences)
-        for seq in sequences:
-            idx, sequence = seq
+        inconsistent_sequences[key] = []
+        for idx, sequence in sequences:
             sequence_types = set(entry.split('<')[1] for entry in sequence)
-            if not seen_types:
+            if not any(issuperset(seen, sequence_types) for seen in seen_types):
                 seen_types.append(sequence_types)
-                inconsistent_sequences[key].append([idx,sequence])
-            else:
-                is_unique = True
-                for seen in seen_types:
-                    # print('jfks',seen,sequence_types,issuperset(seen,sequence_types))
-                    if issuperset(seen,sequence_types):
-                        is_unique = False
-                        break
-                if is_unique:
-                    # print('add',sequence_types,seen_types)
-                    seen_types.append(sequence_types)    
-                    inconsistent_sequences[key].append([idx,sequence])                
+                inconsistent_sequences[key].append([idx, sequence])
 
     return inconsistent_sequences
+
 
 def collect_logs(index_logs,sample):
     trace_nums = []
@@ -315,88 +283,22 @@ def collect_logs(index_logs,sample):
     return trace_nums    
 
 def parse_log(log_string):
-    # print(log_string)
     timestamp_pattern = r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}'
-
-    # 检查 log_string 是否包含符合正则表达式的时间戳
     match = re.search(timestamp_pattern, log_string)
-
+    
     if match:
         timestamp_str = match.group(0)
-        # print(f"Found timestamp: {timestamp_str}")
         timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S.%f")
-        # print(log_string)
-        if "Entering in Method:" in log_string:
-            method_name = re.search(r'Entering in Method: (\w+)', log_string).group(1)
+        data = {
+            'timestamp': timestamp,
+            'method': re.search(r'Method:\s*([\S]+)', log_string).group(1) if re.search(r'Method:\s*([\S]+)', log_string) else None,
+            'class': re.search(r'Class: ([\w\.]+)', log_string).group(1) if re.search(r'Class: ([\w\.]+)', log_string) else None,
+            'arguments': [re.search(r'Arguments: \[(.+?)\],', log_string).group(1)] if re.search(r'Arguments: \[(.+?)\],', log_string) else None,
+            'return': re.search(r'Return: (.+)\)', log_string).group(1) if re.search(r'Return: (.+)\)', log_string) else None,
+            'url': re.search(r'URL:\s*([\S]+)', log_string).group(1) if re.search(r'URL:\s*([\S]+)', log_string) else None
+        }
+        return data
 
-            # 提取类名
-            class_name = re.search(r'Class: ([\w\.]+)', log_string).group(1)
-
-            # 提取参数
-            arguments_match = re.search(r'Arguments: \[(.+?)\],', log_string)
-            if arguments_match:
-                arguments_str = arguments_match.group(1)
-            else:
-                arguments_str = None
-
-            # 提取返回值
-            return_match = re.search(r'Return: (.+)\)', log_string)
-            if return_match:
-                return_str = return_match.group(1)
-            else:
-                return_str = None
-
-            # 提取URL
-            url_match = re.search(r'URL:\s*([\S]+)', log_string)
-            if url_match:
-                url_str = url_match.group(1)
-            else:
-                url_str = None
-
-            # 提取方法
-            method_match = re.search(r'Method:\s*([\S]+)', log_string)
-            if method_match:
-                method_str = method_match.group(1)
-            else:
-                method_str = None
-
-            return {
-                'timestamp': timestamp,
-                'method': method_str,
-                'class': class_name,
-                'arguments': [arguments_str],
-                'return': return_str
-            }
-        # elif "Execution of repository method" in log_string:
-        #     method_name = re.search(r'Execution of repository method: (\w+)', log_string).group(1)
-
-        #     # 提取参数
-        #     arguments_match = re.search(r'Arguments: \[(.+?)\],', log_string)
-        #     if arguments_match:
-        #         arguments_str = arguments_match.group(1)
-        #     else:
-        #         arguments_str = None
-
-        #     # 提取返回值
-        #     return_match = re.search(r'Result: (.+)\)', log_string)
-        #     if return_match:
-        #         return_str = return_match.group(1)
-        #     else:
-        #         return_str = None
-
-        #     # 提取方法
-        #     method_match = re.search(r'method:\s*([\S]+)', log_string)
-        #     if method_match:
-        #         method_str = method_match.group(1)
-        #     else:
-        #         method_str = None
-
-        #     return {
-        #         'timestamp': timestamp,
-        #         'method': method_str,
-        #         'arguments': [None],
-        #         'return': return_str
-        #     }
 
 def find_relative_logs(traces,API1,API2):
     closest_logs = []
@@ -424,15 +326,7 @@ def find_relative_logs(traces,API1,API2):
     return Log1,Log2
 
 def dict_to_string(d):
-    result = []
-    for key, value in d.items():
-        if isinstance(value, list):
-            value = ', '.join(map(str, value))
-            result.append(f"{key}: {value}")
-                
-        # if "timestamp" not in key:
-        #     result.append(f"{key}: {value}")
-    return " ".join(result)
+    return " ".join(f"{key}: {', '.join(map(str, value)) if isinstance(value, list) else value}" for key, value in d.items())
 
 def deploy_dataflow(data):
     pattern = re.compile(r'#([^:]+):\s*(\[.*?\])\s*(\d+\.?\d*)s?')
@@ -466,6 +360,28 @@ def deploy_dataflow(data):
     return result_dict
 
 def main():
+    # 设置命令行参数解析
+    parser = argparse.ArgumentParser(description="Script to set dataflowFLAG and TriggerflowFLAG.")
+    
+    parser.add_argument(
+        '--dataflowFLAG', 
+        type=bool, 
+        default=False, 
+        help='Set this to True or False. Warning: Setting this to True may incur high ChatGPT costs.'
+    )
+    parser.add_argument(
+        '--TriggerflowFLAG', 
+        type=bool, 
+        default=False, 
+        help='Set this to True or False. Warning: Setting this to True may incur high ChatGPT costs.'
+    )
+
+    args = parser.parse_args()
+
+    global dataflowFLAG, TriggerflowFLAG
+    dataflowFLAG = args.dataflowFLAG
+    TriggerflowFLAG = args.TriggerflowFLAG
+    
     log_lines = read_log_file(log_file_path)
     tasks = read_task_file(task_file_path)
     
@@ -589,11 +505,8 @@ def main():
                     branch_dataflows = {}
                     for id, branch in sequence:
                         branch_dataflow = [flow for flow in datatrans if any(endpoint in flow for endpoint in branch)]
-                        # branch_dataflows[f'branch_{id}'] = branch_dataflow
                         break
 
-
-                    # 打印每个 branch 的 dataflow
                     print("\nBranch Dataflows:")
                     print(json.dumps(branch_dataflows, indent=4))
                     
@@ -606,7 +519,6 @@ def main():
 
     print("unique_matches",unique_matches,len(unique_matches))
     time.sleep(10)
-    # time.sleep(432)
     for i, disp_match in enumerate(unique_matches):
         # if i >= 10: break
         start,end = disp_match.split(">")
@@ -660,8 +572,7 @@ def main():
             except:
                 pass
     print(data_constrains)
-    # with open('data_constrains.json', 'w') as f:
-    #     json.dump(data_constrains, f, indent=4)
+
 if __name__ == "__main__":
     main()
 
