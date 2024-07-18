@@ -100,19 +100,3 @@ def main():
 if __name__ == "__main__":
     main()
     
-# for i in range(int(codedown) - 1, codeup - 1, -1):
-#     line = lines[i].strip()
-
-#     if target_variable in line and '=' in line:
-#         variable_name = line.split('=')[0].strip()
-#         if variable_name == target_variable or variable_name.endswith(target_variable):
-#             print(f"Initialization or assignment of '{target_variable}' found at line {i + 1}: {line}")
-#             if 'new' in line or 'var' in line:
-#                 print(f"Variable '{target_variable}' is initialized here.")
-#                 break
-#             else:
-#                 source_variable = line.split('=')[1].strip().split()[0]
-#                 if '(' in source_variable:
-#                     source_variable = source_variable[:source_variable.index('(')]
-#                 target_variable = source_variable.strip(';')
-#                 print(f"Variable '{target_variable}' is passsed here.")

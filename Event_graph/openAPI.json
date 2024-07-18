@@ -24,3 +24,5 @@
     "travelplan.service getCheapest":"Post /api/v1/travelplanservice/travelPlan/cheapest",
     "travelplan.service getMinStation":"Post /api/v1/travelplanservice/travelPlan/minStation"
 }
+
+

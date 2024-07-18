@@ -170,8 +170,16 @@ def parse_js(js_content):
 
         
 def analyze_html_js(file_name,graph_file,api_type):
-    tree = ET.parse(graph_file)
-    # js_code = read_js_code(file_name)
+    with open(graph_file, 'r', encoding='utf-8') as file:
+        content = file.read()
+
+    content = content.replace('&', '&amp;').replace('&amp;amp;', '&amp;')
+    temp_graph_file = graph_file + ".temp"
+    with open(temp_graph_file, 'w', encoding='utf-8') as file:
+        file.write(content)
+
+    tree = ET.parse(temp_graph_file)    
+    os.remove(temp_graph_file)
     if api_type == "axis":
         axis_range = extract_axis(tree)
         print(axis_range)
@@ -193,8 +201,8 @@ def analyze_html_js(file_name,graph_file,api_type):
             involve_trigger[function_name] = involved_functions
         print("the method trigger:",method_trigger)
         print("the method involve:",involve_trigger)
-        extract_data_flow(tree,url_nodes,data_nodes,axis_range,file_name,function_range,func_API)
-        extract_if_condition(tree,axis_range)
+        extract_code_snippets(tree,url_nodes,data_nodes,axis_range,file_name,function_range,func_API)
+        # extract_if_condition(tree,axis_range) Define in dataflow_and_trigger.py
 
 def find_nodes_by_key(root, key,value):
     namespaces = {'graphml': 'http://graphml.graphdrawing.org/xmlns'} 
@@ -237,7 +245,7 @@ def find_nodes_by_key(root, key,value):
                                 else:pass
     return nodes
 
-def extract_data_flow(tree,url_nodes,data_nodes,axis_range,file_name,function_range,func_API):
+def extract_code_snippets(tree,url_nodes,data_nodes,axis_range,file_name,function_range,func_API):
     ajaxid_dict = {}
     for node in url_nodes + data_nodes:
         node_id = node.get('id')
@@ -499,32 +507,32 @@ if __name__ == "__main__":
     # html_parser("/home/yifannus2023/train-ticket-modify/ts-ui-dashboard/static/client_order_list.html")
     analyze_html_js("/home/yifannus2023/train-ticket-modify/ts-ui-dashboard/static/assets/js/client_order_list.js","/home/yifannus2023/JAW/data/out/output1.graphml","axis")
 
-from bs4 import BeautifulSoup
+# from bs4 import BeautifulSoup
 
-# 假设我们有一个HTML文件或字符串
-html_content = """
-<tbody>
-    <tr v-for="(item, index) in myOrderList">
-        <td>{{ index }}</td>
-        <td>{{ item.id }}</td>
-        <td>{{ item.from }}</td>
-        <td>{{ item.to }}</td>
-        <td>{{ item.trainNumber }}</td>
-    </tr>
-</tbody>
-"""
+# # 假设我们有一个HTML文件或字符串
+# html_content = """
+# <tbody>
+#     <tr v-for="(item, index) in myOrderList">
+#         <td>{{ index }}</td>
+#         <td>{{ item.id }}</td>
+#         <td>{{ item.from }}</td>
+#         <td>{{ item.to }}</td>
+#         <td>{{ item.trainNumber }}</td>
+#     </tr>
+# </tbody>
+# """
 
-def extract_vue_data_source(html_content):
-    soup = BeautifulSoup(html_content, 'lxml')
+# def extract_vue_data_source(html_content):
+#     soup = BeautifulSoup(html_content, 'lxml')
     
-    # 查找所有使用v-for的元素
-    v_for_elements = soup.find_all(lambda tag: tag.has_attr('v-for'))
+#     # 查找所有使用v-for的元素
+#     v_for_elements = soup.find_all(lambda tag: tag.has_attr('v-for'))
     
-    for element in v_for_elements:
-        v_for = element['v-for']
-        # 简单解析v-for的内容，找到数据源名称
-        data_source = v_for.split(' in ')[1]
-        print(f"Found v-for in element {element.name}, data source: {data_source}")
+#     for element in v_for_elements:
+#         v_for = element['v-for']
+#         # 简单解析v-for的内容，找到数据源名称
+#         data_source = v_for.split(' in ')[1]
+#         print(f"Found v-for in element {element.name}, data source: {data_source}")
 
-# 调用函数
-extract_vue_data_source(html_content)
+# # 调用函数
+# extract_vue_data_source(html_content)

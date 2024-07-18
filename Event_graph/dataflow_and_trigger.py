@@ -13,6 +13,7 @@ sys.path.append('../consistency_prompt')
 import data_relationship
 import ast
 from gptchecker import GPTChecker
+import trigger_code_parse
 
 # 加载 .env 文件
 env_path = '../consistency_prompt/.env'
@@ -26,13 +27,13 @@ dataflow = """
 #trainticket_change_seeds: ['auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > travel.service.TravelServiceImpl.queryByBatch', 'auth.service.impl.TokenServiceImpl.getToken > travel2.service.TravelServiceImpl.queryByBatch', 'auth.service.impl.TokenServiceImpl.getToken > rebook.service.RebookServiceImpl.rebook', 'travel.service.TravelServiceImpl.queryByBatch > rebook.service.RebookServiceImpl.rebook','rebook.service.RebookServiceImpl.rebook > inside_payment.service.InsidePaymentServiceImpl.payDifference'] 20.95
 #getConsign:['auth.service.impl.TokenServiceImpl.getToken > consign.service.ConsignServiceImpl.queryByAccountId'] 11.62
 #getCollect:['verifycode.service.impl.VerifyCodeServiceImpl.getImageCode > auth.service.impl.TokenServiceImpl.getToken', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh'] 13.8993
-#Enter:['auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > execute.service.ExecuteServiceImpl.ticketExecute', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > execute.service.ExecuteServiceImpl.ticketExecute','order.service.OrderServiceImpl.queryOrdersForRefresh > execute.service.ExecuteServiceImpl.ticketExecute', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > execute.service.ExecuteServiceImpl.ticketExecute'] 15.6334
+#trainticket_enter_seeds:['auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > execute.service.ExecuteServiceImpl.ticketExecute', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > execute.service.ExecuteServiceImpl.ticketExecute','order.service.OrderServiceImpl.queryOrdersForRefresh > execute.service.ExecuteServiceImpl.ticketExecute', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > execute.service.ExecuteServiceImpl.ticketExecute'] 15.6334
 #getEnter:['verifycode.service.impl.VerifyCodeServiceImpl.getImageCode > auth.service.impl.TokenServiceImpl.getToken', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh'] 17.6727
-#Payseeds:['auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'order.service.OrderServiceImpl.queryOrdersForRefresh > inside_payment.service.InsidePaymentServiceImpl.pay', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > inside_payment.service.InsidePaymentServiceImpl.pay', 'inside_payment.service.InsidePaymentServiceImpl.pay > order.service.OrderServiceImpl.queryOrdersForRefresh', 'inside_payment.service.InsidePaymentServiceImpl.pay > other.service.OrderOtherServiceImpl.queryOrdersForRefresh'] 29.5432s
-#Consign: ['auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.queryByOrderId', 'order.service.OrderServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.queryByOrderId'] 12.95 ['verifycode.service.impl.VerifyCodeServiceImpl.getImageCode > auth.service.impl.TokenServiceImpl.getToken', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh'] 16.577 ['auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'order.service.OrderServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.queryByOrderId', 'order.service.OrderServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.updateConsignRecord', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.queryByOrderId', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.updateConsignRecord'] 22.2460
-#Preserve: ['verifycode.service.impl.VerifyCodeServiceImpl.getImageCode > auth.service.impl.TokenServiceImpl.getToken', 'auth.service.impl.TokenServiceImpl.getToken > assurance.service.AssuranceServiceImpl.getAllAssuranceTypes', 'auth.service.impl.TokenServiceImpl.getToken > contacts.service.ContactsServiceImpl.findContactsByAccountId', 'auth.service.impl.TokenServiceImpl.getToken > foodsearch.service.FoodServiceImpl.getAllFood', 'auth.service.impl.TokenServiceImpl.getToken > preserveOther.service.PreserveOtherServiceImpl.preserve', 'contacts.service.ContactsServiceImpl.findContactsByAccountId > preserveOther.service.PreserveOtherServiceImpl.preserve', 'travel.service.TravelServiceImpl.queryByBatch > preserveOther.service.PreserveOtherServiceImpl.preserve', 'travel2.service.TravelServiceImpl.queryByBatch > preserveOther.service.PreserveOtherServiceImpl.preserve','contacts.service.ContactsServiceImpl.findContactsByAccountId > preserve.service.PreserveServiceImpl.preserve', 'foodsearch.service.FoodServiceImpl.getAllFood > preserve.service.PreserveServiceImpl.preserve','travel2.service.TravelServiceImpl.queryByBatch > preserve.service.PreserveServiceImpl.preserve','auth.service.impl.TokenServiceImpl.getToken > preserve.service.PreserveServiceImpl.preserve','travel.service.TravelServiceImpl.queryByBatch > preserve.service.PreserveServiceImpl.preserve'] 16s
-#Collect: ['auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > execute.service.ExecuteServiceImpl.ticketCollect', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'order.service.OrderServiceImpl.queryOrdersForRefresh > execute.service.ExecuteServiceImpl.ticketCollect', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > execute.service.ExecuteServiceImpl.ticketCollect'] 28.3366
-#Adsearch: [] 6.99,29.64,11.0810
+#trainticket_pay_seeds:['auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'order.service.OrderServiceImpl.queryOrdersForRefresh > inside_payment.service.InsidePaymentServiceImpl.pay', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > inside_payment.service.InsidePaymentServiceImpl.pay', 'inside_payment.service.InsidePaymentServiceImpl.pay > order.service.OrderServiceImpl.queryOrdersForRefresh', 'inside_payment.service.InsidePaymentServiceImpl.pay > other.service.OrderOtherServiceImpl.queryOrdersForRefresh'] 29.5432s
+#trainticket_consign_seeds: ['auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.queryByOrderId', 'order.service.OrderServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.queryByOrderId'] 12.95 ['verifycode.service.impl.VerifyCodeServiceImpl.getImageCode > auth.service.impl.TokenServiceImpl.getToken', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh'] 16.577 ['auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'order.service.OrderServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.queryByOrderId', 'order.service.OrderServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.updateConsignRecord', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.queryByOrderId', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.updateConsignRecord'] 22.2460
+#trainticket_preserve_seeds: ['verifycode.service.impl.VerifyCodeServiceImpl.getImageCode > auth.service.impl.TokenServiceImpl.getToken', 'auth.service.impl.TokenServiceImpl.getToken > assurance.service.AssuranceServiceImpl.getAllAssuranceTypes', 'auth.service.impl.TokenServiceImpl.getToken > contacts.service.ContactsServiceImpl.findContactsByAccountId', 'auth.service.impl.TokenServiceImpl.getToken > foodsearch.service.FoodServiceImpl.getAllFood', 'auth.service.impl.TokenServiceImpl.getToken > preserveOther.service.PreserveOtherServiceImpl.preserve', 'contacts.service.ContactsServiceImpl.findContactsByAccountId > preserveOther.service.PreserveOtherServiceImpl.preserve', 'travel.service.TravelServiceImpl.queryByBatch > preserveOther.service.PreserveOtherServiceImpl.preserve', 'travel2.service.TravelServiceImpl.queryByBatch > preserveOther.service.PreserveOtherServiceImpl.preserve','contacts.service.ContactsServiceImpl.findContactsByAccountId > preserve.service.PreserveServiceImpl.preserve', 'foodsearch.service.FoodServiceImpl.getAllFood > preserve.service.PreserveServiceImpl.preserve','travel2.service.TravelServiceImpl.queryByBatch > preserve.service.PreserveServiceImpl.preserve','auth.service.impl.TokenServiceImpl.getToken > preserve.service.PreserveServiceImpl.preserve','travel.service.TravelServiceImpl.queryByBatch > preserve.service.PreserveServiceImpl.preserve'] 16s
+#trainticket_collect_seeds: ['auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > execute.service.ExecuteServiceImpl.ticketCollect', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'order.service.OrderServiceImpl.queryOrdersForRefresh > execute.service.ExecuteServiceImpl.ticketCollect', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > execute.service.ExecuteServiceImpl.ticketCollect'] 28.3366
+#trainticket_advancedsearch_seeds: [] 6.99,29.64,11.0810
 #
 """
 
@@ -66,7 +67,7 @@ with open("API_service.json") as fp:
 with open('trainticket_class_def.json') as fp:
     trainticket_class_def = json.load(fp)
 
-with open('/home/yifannus2023/TamperLogPrompt/data_constraints.json') as fp:
+with open('/home/yifannus2023/TamperLogPrompt/Event_graph/data_transition_20240718082638.json') as fp:
     data_constrains = json.load(fp)
 
 def read_log_file(file_path):
@@ -260,7 +261,7 @@ def process_logs(logs, api_log_entry):
 
 def find_inconsistent_sequences(seeds_trace):
     inconsistent_sequences = {}
-
+    # print('the seeds trace is:',seeds_trace)
     for key, sequences in seeds_trace.items():
         seen_types = []
         inconsistent_sequences[key] = []
@@ -364,23 +365,30 @@ def main():
     parser = argparse.ArgumentParser(description="Script to set dataflowFLAG and TriggerflowFLAG.")
     
     parser.add_argument(
-        '--dataflowFLAG', 
+        '-d', '--dataflowFLAG', 
         type=bool, 
         default=False, 
         help='Set this to True or False. Warning: Setting this to True may incur high ChatGPT costs.'
     )
     parser.add_argument(
-        '--TriggerflowFLAG', 
+        '-t', '--TriggerflowFLAG', 
         type=bool, 
         default=False, 
         help='Set this to True or False. Warning: Setting this to True may incur high ChatGPT costs.'
     )
-
+    parser.add_argument(
+            '-dc', '--dataconstraintFLAG', 
+            type=bool, 
+            default=False, 
+            help='Set this to True or False. Warning: Setting this to True may incur high ChatGPT costs.'
+        )
+    
     args = parser.parse_args()
 
-    global dataflowFLAG, TriggerflowFLAG
+    global dataflowFLAG, TriggerflowFLAG, dataconstraintFLAG
     dataflowFLAG = args.dataflowFLAG
     TriggerflowFLAG = args.TriggerflowFLAG
+    dataconstraintFLAG = args.dataconstraintFLAG
     
     log_lines = read_log_file(log_file_path)
     tasks = read_task_file(task_file_path)
@@ -463,14 +471,94 @@ def main():
                     logs += output
                 # print(query,logs)
                 _,result = checker.check_data_relationship(logs,trace)
-            #     print(result)
-            #     time.sleep(5)
-            # end_time = time.time()
-            # execution_time = end_time - start_time
-            # print(f"time: {execution_time} sec")
-            # print(len(sequence))
+                # pattern = re.compile(r"\'(.*?)\'")
+                
+    if dataconstraintFLAG:
+        #TODO: Integrate the dataflow blank 
+        pattern = re.compile(r"\'(.*?)\'")
+        matches = pattern.findall(dataflow)
+
+        # 去除重复的项
+        unique_matches = list(set(matches))
+        long_string = ", ".join(unique_matches)
+
+        print("unique_matches",unique_matches,len(unique_matches))
+        time.sleep(10)
+        # data_constrains = {}
+        # Calculate the dataconstraint
+        lack = []
+        for i, disp_match in enumerate(unique_matches):
+            # if i >= 10: break
+            start,end = disp_match.split(">")
+            print("the start and end",start,end)
+            start_API,end_API = API_service[start.strip()], API_service[end.strip()]
+            print("the start and end API",start_API,end_API)
+            totallog1s = []
+            totallog2s = []
+            # print(disp_match)
+            # if disp_match and (disp_match not in list(data_constrains.keys())) and ("verifycode.service.impl.VerifyCodeServiceImpl.getImageCode" not in disp_match) :
+            if "other.service.OrderOtherServiceImpl.queryOrdersForRefresh" in start.strip() and "inside_payment.service.InsidePaymentServiceImpl.pay" in end.strip():
+                if disp_match:
+                    try:
+                        for seeds_name, sequence in common_sequences.items(): 
+                            for idx,seq in sequence:
+                                if start_API in seq and end_API in seq:
+                                    print("swq",idx,seq)
+                                    logs = index_logs[idx-1]
+                                    log1,log2 = find_relative_logs(logs[1],start_API,end_API)
+                                    print(log1,"---",log2)
+                                    if "queryOrdersForRefresh" in start and ("pay" in end or "cancel" in end or "consign" in end):
+                                        pattern = r'orderId=([a-f0-9\-]+)'
+                                        match = re.search(pattern, log2["arguments"][0])
+                                        if match:
+                                            order_id = match.group(1)
+                                            print(f"Extracted orderId: {order_id}",log1["return"])
+                                            if order_id not in log1["return"]:
+                                                break
+                                    if log1 and log2 and len(totallog1s) < 3:
+                                        totallog1s.append(log1)
+                                        totallog2s.append(log2)
+                        if len(totallog1s) >= 1:
+                            alllogs = []
+                            for i in range(len(totallog1s)):
+                                alllogs.append(totallog1s[i])
+                                alllogs.append(totallog2s[i])
+                            logs = ""
+                            # print("alllogs",alllogs)
+                            # title = "<logset" + str(idx%2) + ">" + "\n"
+                            output = "\n".join(dict_to_string(d) for d in alllogs)
+                            # print('the logs are:',output)
+                            class_definition1,class_definition2 = trainticket_class_def[start.strip()]['output'][1],trainticket_class_def[end.strip()]["input"][1]
+                            print("class def1 and def2",class_definition1,class_definition2)
+                            entity1,entity2 = trainticket_class_def[start.strip()]['output'][0],trainticket_class_def[end.strip()]["input"][0]
+                            print(alllogs)
+                            # time.sleep(30)
+                            passed,result = checker.check_input_constraint(class_name1=entity1, class_name2=entity2, class_definition1=class_definition1,
+                            class_definition2=class_definition2,logs=[str(log) for log in alllogs])
+                            print(result)
+                            if passed:
+                                code_string = json.dumps(result, indent=4, ensure_ascii=False)
+                                data_constrains[disp_match] = code_string
+                        else:
+                            lack.append(disp_match)
+                    except:
+                        pass
+            # print(data_constrains)
+        #     print(result)
+        #     time.sleep(5)
+        # end_time = time.time()
+        # execution_time = end_time - start_time
+        # print(f"time: {execution_time} sec")
+        # print(len(sequence))
     data_transition = deploy_dataflow(dataflow)
-    print('the data transition is:',data_transition)
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    file_name = f"data_transition_{timestamp}.json"
+    with open(file_name, 'w') as file:
+        json.dump(data_constrains, file, indent=4)
+    print("the lack is:",lack,len(lack))
+    for element in unique_matches:
+        if element not in list(data_constrains.keys()) and element not in lack:
+            print("the element is:",element)
     #Trigger transition
     if TriggerflowFLAG:
         for seeds_name, sequence in common_sequences.items(): 
@@ -486,22 +574,26 @@ def main():
                         datatrans.append(start_API + " > " + end_API)
                     print("the datatrans is:",datatrans)
                     branch_diffs = {}
+                    diff = None
+                    all_apis_list = []
                     for i, (id1, branch1) in enumerate(sequence):
                         for j, (id2, branch2) in enumerate(sequence):
                             if i >= j: 
                                 continue
                             diff = set(branch1).symmetric_difference(set(branch2))
+                            print('the diff is:',diff,set(branch1).issubset(set(branch2)),set(branch2).issubset(set(branch1)))
                             if set(branch1).issubset(set(branch2)) or set(branch2).issubset(set(branch1)):
-                                continue
-                            else:
+                                break
+                            # else:
+                            if diff:
                                 branch_diffs[f'branch_{id1}_vs_branch_{id2}'] = list(diff)
-                            all_apis = set()
-                            for apis in branch_diffs.values():
-                                all_apis.update(apis)
-                            all_apis_list = list(all_apis)
+                                all_apis = set()
+                                for apis in branch_diffs.values():
+                                    all_apis.update(apis)
+                                all_apis_list = list(all_apis)
                     if "POST</api/v1/travel2service/trips/left" in all_apis_list:
                         all_apis_list.remove("POST</api/v1/travel2service/trips/left")
-                    print("Branch Differences:",all_apis_list)
+                    print("Branch Differences:",branch_diffs,all_apis_list)
                     branch_dataflows = {}
                     for id, branch in sequence:
                         branch_dataflow = [flow for flow in datatrans if any(endpoint in flow for endpoint in branch)]
@@ -509,69 +601,6 @@ def main():
 
                     print("\nBranch Dataflows:")
                     print(json.dumps(branch_dataflows, indent=4))
-                    
-    pattern = re.compile(r"\'(.*?)\'")
-    matches = pattern.findall(dataflow)
-
-    # 去除重复的项
-    unique_matches = list(set(matches))
-    long_string = ", ".join(unique_matches)
-
-    print("unique_matches",unique_matches,len(unique_matches))
-    time.sleep(10)
-    for i, disp_match in enumerate(unique_matches):
-        # if i >= 10: break
-        start,end = disp_match.split(">")
-        print("the start and end",start,end)
-        start_API,end_API = API_service[start.strip()], API_service[end.strip()]
-        print("the start and end API",start_API,end_API)
-        totallog1s = []
-        totallog2s = []
-        # print(disp_match)
-        # if "order.service.OrderServiceImpl.queryOrdersForRefresh" in start.strip() and "consign.service.ConsignServiceImpl.queryByOrderId" in end.strip():
-        if disp_match:
-            try:
-                for seeds_name, sequence in common_sequences.items(): 
-                    for idx,seq in sequence:
-                        if start_API in seq and end_API in seq:
-                            print("swq",idx,seq)
-                            logs = index_logs[idx-1]
-                            log1,log2 = find_relative_logs(logs[1],start_API,end_API)
-                            print(log1,"---",log2)
-                            if "queryOrdersForRefresh" in start and ("pay" in end or "cancel" in end or "consign" in end):
-                                pattern = r'orderId=([a-f0-9\-]+)'
-                                match = re.search(pattern, log2["arguments"][0])
-                                if match:
-                                    order_id = match.group(1)
-                                    print(f"Extracted orderId: {order_id}",log1["return"])
-                                    if order_id not in log1["return"]:
-                                        break
-                            if log1 and log2 and len(totallog1s) < 3:
-                                totallog1s.append(log1)
-                                totallog2s.append(log2)
-                if len(totallog1s) >= 1:
-                    alllogs = []
-                    for i in range(len(totallog1s)):
-                        alllogs.append(totallog1s[i])
-                        alllogs.append(totallog2s[i])
-                    logs = ""
-                    # print("alllogs",alllogs)
-                    # title = "<logset" + str(idx%2) + ">" + "\n"
-                    output = "\n".join(dict_to_string(d) for d in alllogs)
-                    # print('the logs are:',output)
-                    class_definition1,class_definition2 = trainticket_class_def[start.strip()]['output'][1],trainticket_class_def[end.strip()]["input"][1]
-                    print("class def1 and def2",class_definition1,class_definition2)
-                    entity1,entity2 = trainticket_class_def[start.strip()]['output'][0],trainticket_class_def[end.strip()]["input"][0]
-                    print(alllogs)
-                    time.sleep(30)
-                    _,result = checker.check_input_constraint(class_name1=entity1, class_name2=entity2, class_definition1=class_definition1,
-                    class_definition2=class_definition2,logs=[str(log) for log in alllogs])
-                    print(result)
-                    code_string = json.dumps(result, indent=4, ensure_ascii=False)
-                    data_constrains[disp_match] = code_string
-            except:
-                pass
-    print(data_constrains)
 
 if __name__ == "__main__":
     main()
@@ -580,3 +609,54 @@ if __name__ == "__main__":
 ['auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'order.service.OrderServiceImpl.queryOrdersForRefresh > cancel.service.CancelServiceImpl.calculateRefund', 'order.service.OrderServiceImpl.queryOrdersForRefresh > inside_payment.service.InsidePaymentServiceImpl.pay', 'auth.service.impl.TokenServiceImpl.getToken > assurance.service.AssuranceServiceImpl.getAllAssuranceTypes', 'order.service.OrderServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.queryByOrderId', 'auth.service.impl.TokenServiceImpl.getToken > contacts.service.ContactsServiceImpl.findContactsByAccountId', 'contacts.service.ContactsServiceImpl.findContactsByAccountId > preserveOther.service.PreserveOtherServiceImpl.preserve', 'auth.service.impl.TokenServiceImpl.getToken > execute.service.ExecuteServiceImpl.ticketCollect', 'inside_payment.service.InsidePaymentServiceImpl.pay > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > rebook.service.RebookServiceImpl.rebook', 'order.service.OrderServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.updateConsignRecord', 'travel.service.TravelServiceImpl.queryByBatch > preserveOther.service.PreserveOtherServiceImpl.preserve', 'verifycode.service.impl.VerifyCodeServiceImpl.getImageCode > auth.service.impl.TokenServiceImpl.getToken', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > cancel.service.CancelServiceImpl.calculateRefund', 'auth.service.impl.TokenServiceImpl.getToken > preserveOther.service.PreserveOtherServiceImpl.preserve', 'travel.service.TravelServiceImpl.queryByBatch > preserve.service.PreserveServiceImpl.preserve', 'auth.service.impl.TokenServiceImpl.getToken > travel.service.TravelServiceImpl.queryByBatch', 'auth.service.impl.TokenServiceImpl.getToken > execute.service.ExecuteServiceImpl.ticketExecute', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > inside_payment.service.InsidePaymentServiceImpl.pay', 'auth.service.impl.TokenServiceImpl.getToken > foodsearch.service.FoodServiceImpl.getAllFood','','']
 
 {'trainticket_search_seeds': [['GET</index.html', 'POST</api/v1/travelservice/trips/left', 'POST</api/v1/travel2service/trips/left']], 'trainticket_cancel_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'GET</api/v1/cancelservice/cancel/refound/', 'GET</api/v1/cancelservice/cancel/'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh', 'GET</api/v1/cancelservice/cancel/refound/']], 'trainticket_getorder_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh']], 'trainticket_change_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/travelservice/trips/left', 'POST</api/v1/travel2service/trips/left', 'POST</api/v1/rebookservice/rebook'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/travelservice/trips/left', 'POST</api/v1/travel2service/trips/left', 'POST</api/v1/rebookservice/rebook', 'POST</api/v1/rebookservice/updateorder']], 'trainticket_getconsign_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'GET</api/v1/consignservice/consigns/account/']], 'trainticket_getcollect_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh']], 'trainticket_enter_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'GET</api/v1/executeservice/execute/execute/']], 'trainticket_getenter_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh']], 'trainticket_pay_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/inside_pay_service/inside_payment'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh']], 'trainticket_consign_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'GET</api/v1/consignservice/consigns/order/', 'PUT</api/v1/consignservice/consigns'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'GET</api/v1/consignservice/consigns/order/'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh']], 'trainticket_preserve_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/travel2service/trips/left', 'POST</api/v1/travelservice/trips/left', 'GET</api/v1/assuranceservice/assurances/types', 'GET</api/v1/contactservice/contacts/account/', 'GET</api/v1/foodservice/foods/', 'POST</api/v1/preserveservice/preserve'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/travel2service/trips/left', 'POST</api/v1/travelservice/trips/left', 'GET</api/v1/assuranceservice/assurances/types', 'GET</api/v1/contactservice/contacts/account/', 'GET</api/v1/foodservice/foods/'], ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/travelservice/trips/left', 'POST</api/v1/travel2service/trips/left', 'GET</api/v1/assuranceservice/assurances/types', 'GET</api/v1/contactservice/contacts/account/', 'GET</api/v1/foodservice/foods/', 'POST</api/v1/preserveotherservice/preserveOther']], 'trainticket_login_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'GET</api/v1/userservice/users']], 'trainticket_collect_seeds': [['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'GET</api/v1/executeservice/execute/collected/']], 'trainticket_advancedsearch_seeds': [['GET</index.html', 'POST</api/v1/travelplanservice/travelPlan/minStation'], ['GET</index.html', 'POST</api/v1/travelplanservice/travelPlan/cheapest'], ['GET</index.html', 'POST</api/v1/travelplanservice/travelPlan/quickest']]}
+
+# the seq is: trainticket_login_seeds [[26, ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'GET</api/v1/userservice/users']], [3, ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh']]]
+# the datatrans is: ['GET</api/v1/verifycode/generate > POST</api/v1/users/login', 'POST</api/v1/users/login > POST</api/v1/orderservice/order/refresh', 'POST</api/v1/users/login > POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/users/login > POST</api/v1/orderservice/order/refresh', 'POST</api/v1/users/login > GET</api/v1/userservice/users']
+# the diff is: {'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh', 'GET</api/v1/userservice/users'} False False
+# Branch Differences: {'branch_26_vs_branch_3': ['POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh', 'GET</api/v1/userservice/users']} ['GET</api/v1/userservice/users', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh']
+
+# Branch Dataflows:
+# {}
+# the seq is: trainticket_cancel_seeds [[104, ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'GET</api/v1/cancelservice/cancel/refound/', 'GET</api/v1/cancelservice/cancel/']], [1032, ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'GET</api/v1/cancelservice/cancel/refound/']]]
+# the datatrans is: ['GET</api/v1/verifycode/generate > POST</api/v1/users/login', 'POST</api/v1/users/login > POST</api/v1/orderservice/order/refresh', 'POST</api/v1/users/login > POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh > GET</api/v1/cancelservice/cancel/refound/', 'POST</api/v1/orderOtherService/orderOther/refresh > GET</api/v1/cancelservice/cancel/refound/']
+# the diff is: {'GET</api/v1/cancelservice/cancel/'} False True
+# Branch Differences: {} []
+
+# Branch Dataflows:
+# {}
+# the seq is: trainticket_change_seeds [[4, ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/travelservice/trips/left', 'POST</api/v1/travel2service/trips/left', 'POST</api/v1/rebookservice/rebook']], [45, ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/travelservice/trips/left', 'POST</api/v1/travel2service/trips/left', 'POST</api/v1/rebookservice/rebook', 'POST</api/v1/rebookservice/updateorder']], [927, ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/travelservice/trips/left', 'POST</api/v1/rebookservice/rebook', 'POST</api/v1/rebookservice/rebook/difference', 'POST</api/v1/rebookservice/updateorder']]]
+# the datatrans is: ['POST</api/v1/users/login > POST</api/v1/orderservice/order/refresh', 'POST</api/v1/users/login > POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/users/login > POST</api/v1/travelservice/trips/left', 'POST</api/v1/users/login > POST</api/v1/travel2service/trips/left', 'POST</api/v1/users/login > POST</api/v1/rebookservice/rebook', 'POST</api/v1/travelservice/trips/left > POST</api/v1/rebookservice/rebook', 'POST</api/v1/rebookservice/rebook > POST</api/v1/inside_pay_service/inside_payment/difference']
+# the diff is: {'POST</api/v1/rebookservice/updateorder'} True False
+# the diff is: {'POST</api/v1/travel2service/trips/left', 'POST</api/v1/rebookservice/rebook/difference'} False False
+# Branch Differences: {'branch_45_vs_branch_927': ['POST</api/v1/travel2service/trips/left', 'POST</api/v1/rebookservice/rebook/difference']} ['POST</api/v1/rebookservice/rebook/difference']
+
+# Branch Dataflows:
+# {}
+# the seq is: trainticket_pay_seeds [[17, ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/inside_pay_service/inside_payment']], [346, ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh']]]
+# the datatrans is: ['POST</api/v1/users/login > POST</api/v1/orderservice/order/refresh', 'POST</api/v1/users/login > POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh > POST</api/v1/inside_pay_service/inside_payment', 'POST</api/v1/orderOtherService/orderOther/refresh > POST</api/v1/inside_pay_service/inside_payment', 'POST</api/v1/inside_pay_service/inside_payment > POST</api/v1/orderservice/order/refresh', 'POST</api/v1/inside_pay_service/inside_payment > POST</api/v1/orderOtherService/orderOther/refresh']
+# the diff is: {'POST</api/v1/inside_pay_service/inside_payment'} False True
+# Branch Differences: {} []
+
+# Branch Dataflows:
+# {}
+# the seq is: trainticket_consign_seeds [[18, ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'GET</api/v1/consignservice/consigns/order/', 'PUT</api/v1/consignservice/consigns']], [82, ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/orderservice/order/refresh', 'GET</api/v1/consignservice/consigns/order/']], [346, ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh']]]
+# the datatrans is: ['POST</api/v1/users/login > POST</api/v1/orderOtherService/orderOther/refresh', 'POST</api/v1/users/login > POST</api/v1/orderservice/order/refresh', 'POST</api/v1/orderOtherService/orderOther/refresh > GET</api/v1/consignservice/consigns/order/', 'POST</api/v1/orderservice/order/refresh > GET</api/v1/consignservice/consigns/order/']
+# the diff is: {'PUT</api/v1/consignservice/consigns'} False True
+# the diff is: {'GET</api/v1/consignservice/consigns/order/'} False True
+# Branch Differences: {} []
+
+# Branch Dataflows:
+# {}
+# the seq is: trainticket_advancedsearch_seeds [[97, ['GET</index.html', 'POST</api/v1/travelplanservice/travelPlan/minStation']], [36, ['GET</index.html', 'POST</api/v1/travelplanservice/travelPlan/cheapest']], [47, ['GET</index.html', 'POST</api/v1/travelplanservice/travelPlan/quickest']]]
+# the datatrans is: []
+# the diff is: {'POST</api/v1/travelplanservice/travelPlan/cheapest', 'POST</api/v1/travelplanservice/travelPlan/minStation'} False False
+# the diff is: {'POST</api/v1/travelplanservice/travelPlan/minStation', 'POST</api/v1/travelplanservice/travelPlan/quickest'} False False
+# the diff is: {'POST</api/v1/travelplanservice/travelPlan/cheapest', 'POST</api/v1/travelplanservice/travelPlan/quickest'} False False
+# Branch Differences: {'branch_97_vs_branch_36': ['POST</api/v1/travelplanservice/travelPlan/cheapest', 'POST</api/v1/travelplanservice/travelPlan/minStation'], 'branch_97_vs_branch_47': ['POST</api/v1/travelplanservice/travelPlan/minStation', 'POST</api/v1/travelplanservice/travelPlan/quickest'], 'branch_36_vs_branch_47': ['POST</api/v1/travelplanservice/travelPlan/cheapest', 'POST</api/v1/travelplanservice/travelPlan/quickest']} ['POST</api/v1/travelplanservice/travelPlan/cheapest', 'POST</api/v1/travelplanservice/travelPlan/minStation', 'POST</api/v1/travelplanservice/travelPlan/quickest']
+
+# Branch Dataflows:
+# {}
+# the seq is: trainticket_preserve_seeds [[331, ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/travel2service/trips/left', 'POST</api/v1/travelservice/trips/left', 'GET</api/v1/assuranceservice/assurances/types', 'GET</api/v1/contactservice/contacts/account/', 'GET</api/v1/foodservice/foods/', 'POST</api/v1/preserveservice/preserve']], [372, ['GET</index.html', 'GET</api/v1/verifycode/generate', 'POST</api/v1/users/login', 'POST</api/v1/travelservice/trips/left', 'POST</api/v1/travel2service/trips/left', 'GET</api/v1/assuranceservice/assurances/types', 'GET</api/v1/contactservice/contacts/account/', 'GET</api/v1/foodservice/foods/', 'POST</api/v1/preserveotherservice/preserveOther']]]
+# the datatrans is: ['GET</api/v1/verifycode/generate > POST</api/v1/users/login', 'POST</api/v1/users/login > GET</api/v1/assuranceservice/assurances/types', 'POST</api/v1/users/login > GET</api/v1/contactservice/contacts/account/', 'POST</api/v1/users/login > GET</api/v1/foodservice/foods/', 'POST</api/v1/users/login > POST</api/v1/preserveotherservice/preserveOther', 'GET</api/v1/contactservice/contacts/account/ > POST</api/v1/preserveotherservice/preserveOther', 'POST</api/v1/travelservice/trips/left > POST</api/v1/preserveotherservice/preserveOther', 'POST</api/v1/travel2service/trips/left > POST</api/v1/preserveotherservice/preserveOther', 'GET</api/v1/contactservice/contacts/account/ > POST</api/v1/preserveservice/preserve', 'GET</api/v1/foodservice/foods/ > POST</api/v1/preserveservice/preserve', 'POST</api/v1/travel2service/trips/left > POST</api/v1/preserveservice/preserve', 'POST</api/v1/users/login > POST</api/v1/preserveservice/preserve', 'POST</api/v1/travelservice/trips/left > POST</api/v1/preserveservice/preserve']
+# the diff is: {'POST</api/v1/preserveservice/preserve', 'POST</api/v1/preserveotherservice/preserveOther'} False False
+# Branch Differences: {'branch_331_vs_branch_372': ['POST</api/v1/preserveservice/preserve', 'POST</api/v1/preserveotherservice/preserveOther']} ['POST</api/v1/preserveotherservice/preserveOther', 'POST</api/v1/preserveservice/preserve']
