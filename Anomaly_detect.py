@@ -2,6 +2,7 @@ import json
 import re
 from consistency_prompt.gptchecker.tester import Tester
 import multiprocessing
+import time
 from collections import defaultdict
 
 class_method_pattern = re.compile(r'Entering in Method: (\w+), Class: ([\w\.]+)')
@@ -132,36 +133,40 @@ def find_last_log(after_log,pre_classname,logs):
     return None, None, None
 
 if __name__ == "__main__":
-    import time
-    start_time = time.time()
-    txt_file_path = 'Test_data.txt'
-    data_constraints = 'data_constraints.json'
-    commonsense_constraints = 'commonsense_constraints.json'
-    trigger_constraints = "trigger_constraints.json"
-    trainticket_class = "Event_graph/trainticket_class_def.json"
+    # time.sleep(10)
+    with open('res.log', 'r') as file:
+        example_log = file.read()
+    print(example_log)
+    # import time
+    # start_time = time.time()
+    # txt_file_path = 'Test_data.txt'
+    # data_constraints = 'data_constraints.json'
+    # commonsense_constraints = 'commonsense_constraints.json'
+    # trigger_constraints = "trigger_constraints.json"
+    # trainticket_class = "Event_graph/trainticket_class_def.json"
 
-    logs = read_txt_file(txt_file_path)
-    trainticket_class = read_json_file(trainticket_class)
-    commonsense_constraints = read_json_file(commonsense_constraints)
-    data_constraints = read_json_file(data_constraints)
-    trigger_constraints = read_json_file(trigger_constraints)
+    # logs = read_txt_file(txt_file_path)
+    # trainticket_class = read_json_file(trainticket_class)
+    # commonsense_constraints = read_json_file(commonsense_constraints)
+    # data_constraints = read_json_file(data_constraints)
+    # trigger_constraints = read_json_file(trigger_constraints)
 
-    chunk_size = len(logs) 
+    # chunk_size = len(logs) 
 
-    processes = []
-    for i in range(32):
-        start_idx = i * chunk_size
-        end_idx = (i + 1) * chunk_size if i < 31 else len(logs)
-        process = multiprocessing.Process(target=main, args=(
-            logs, trainticket_class, data_constraints, commonsense_constraints, trigger_constraints, start_idx, end_idx))
-        processes.append(process)
+    # processes = []
+    # for i in range(32):
+    #     start_idx = i * chunk_size
+    #     end_idx = (i + 1) * chunk_size if i < 31 else len(logs)
+    #     process = multiprocessing.Process(target=main, args=(
+    #         logs, trainticket_class, data_constraints, commonsense_constraints, trigger_constraints, start_idx, end_idx))
+    #     processes.append(process)
 
-    for process in processes:
-        process.start()
+    # for process in processes:
+    #     process.start()
 
-    for process in processes:
-        process.join()
+    # for process in processes:
+    #     process.join()
 
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    print(f"脚本运行了 {elapsed_time:.2f} 秒")
+    # end_time = time.time()
+    # elapsed_time = end_time - start_time
+    # print(f"脚本运行了 {elapsed_time:.2f} 秒")
