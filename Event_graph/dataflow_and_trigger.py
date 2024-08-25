@@ -15,7 +15,22 @@ import ast
 from gptchecker import GPTChecker
 import trigger_code_parse
 
-# 加载 .env 文件
+skip_elements = [
+    "travel2.service.TravelServiceImpl.queryByBatch > preserve.service.PreserveServiceImpl.preserve",
+    "travel.service.TravelServiceImpl.queryByBatch > preserveOther.service.PreserveOtherServiceImpl.preserve",
+    "order.service.OrderServiceImpl.queryOrdersForRefresh > cancel.service.CancelServiceImpl.calculateRefund",
+    "other.service.OrderOtherServiceImpl.queryOrdersForRefresh > execute.service.ExecuteServiceImpl.ticketCollect",
+    "other.service.OrderOtherServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.queryByOrderId",
+    "auth.service.impl.TokenServiceImpl.getToken > user.service.impl.UserServiceImpl.getAllUsers",
+    "auth.service.impl.TokenServiceImpl.getToken > foodsearch.service.FoodServiceImpl.getAllFood",
+    "auth.service.impl.TokenServiceImpl.getToken > assurance.service.AssuranceServiceImpl.getAllAssuranceTypes",
+    "auth.service.impl.TokenServiceImpl.getToken > contacts.service.ContactsServiceImpl.findContactsByAccountId",
+    "foodsearch.service.FoodServiceImpl.getAllFood > preserve.service.PreserveServiceImpl.preserve",
+    "verifycode.service.impl.VerifyCodeServiceImpl.getImageCode > auth.service.impl.TokenServiceImpl.getToken",
+    "auth.service.impl.TokenServiceImpl.getToken > execute.service.ExecuteServiceImpl.ticketCollect",
+    "other.service.OrderOtherServiceImpl.queryOrdersForRefresh > cancel.service.CancelServiceImpl.calculateRefund"
+]
+
 env_path = '../consistency_prompt/.env'
 load_dotenv(dotenv_path=env_path)
 api_key = os.getenv('API_KEY')
@@ -52,9 +67,9 @@ checker = GPTChecker(
     temperature=0.0
 )
 # 文件路径
-log_file_path = "/home/yifannus2023/TamperLogPrompt/Event_graph/Train_data_modify.txt"
-task_file_path = "/home/yifannus2023/TamperLogPrompt/Event_graph/pre_defined_task.json"
-API_service_path = "/home/yifannus2023/TamperLogPrompt/Event_graph/API_service.json"
+log_file_path = "Train_data_modify.txt"
+task_file_path = "pre_defined_task.json"
+API_service_path = "API_service.json"
 with open("openAPI.json") as fp:
     OPENAPI = json.load(fp)
     
@@ -67,7 +82,7 @@ with open("API_service.json") as fp:
 with open('trainticket_class_def.json') as fp:
     trainticket_class_def = json.load(fp)
 
-with open('/home/yifannus2023/TamperLogPrompt/Event_graph/data_transition_20240718082638.json') as fp:
+with open('data_transition_20240718082638.json') as fp:
     data_constrains = json.load(fp)
 
 def read_log_file(file_path):
@@ -113,7 +128,7 @@ def match_logs_with_tasks(index_logs, tasks):
     for task_name,seeds in tasks.items():
         extend_logs = []
         for seed in seeds:
-            # print(seed)
+            # #print(seed)
             if len(seed) == 2:
                 seed_logs, seed_end = seed
                 # if len(seed_logs) > 1:
@@ -123,21 +138,21 @@ def match_logs_with_tasks(index_logs, tasks):
                 extend_logs.append([seed_logs, seed_end])
                 
         expanded_seed_logs[task_name] = extend_logs
-    # print("e4343",expanded_seed_logs)
+    # #print("e4343",expanded_seed_logs)
     # time.sleep(3)
     for index, group in index_logs:
         # if index in {331, 372, 37}:
-            # print(index,group)
+            # #print(index,group)
             for task_name, seeds in tasks.items():
                 # if "trainticket_change_seeds" in task_name:
-                    # print('login seeds',seeds)
+                    # #print('login seeds',seeds)
                     FLAG = check_group_with_seeds(expanded_seed_logs[task_name],group)
                     if FLAG:
                         # time.sleep(5)
                         sequence = [f"{entry['method']}<{normalize_url(entry['url'])}" for entry in group]
                         sequence = normalize_sequence(sequence)
                         sequence = tuple(sequence)
-                        # print("the seq is:",index,sequence)
+                        # #print("the seq is:",index,sequence)
                         if sequence not in sequences[task_name]:
                             sequences[task_name].add(sequence)
                             group_indices[task_name].add(index)
@@ -175,9 +190,9 @@ def normalize_url(url):
 
 def remove_subsets(seed_sets):
     keys = list(seed_sets.keys())
-    # print(keys)
+    # #print(keys)
     for i in range(len(keys)):
-        # print(keys[i])
+        # #print(keys[i])
         if "login_seeds" not in keys[i]:
             for j in range(len(keys)):
                 if "login_seeds" not in keys[j]:
@@ -189,7 +204,7 @@ def remove_subsets(seed_sets):
     return seed_sets
 
 def issuperset(seqA,seqB):
-    # print("eee",seqA,seqB)
+    # #print("eee",seqA,seqB)
     for i in seqA:
         if i not in seqB:
             return False
@@ -210,7 +225,7 @@ def convert_to_datetime(timestamp_str):
     # 拆分日期和时间部分
     date_str, rest = timestamp_str.split(':', 1)
     time_str, tz_and_microseconds = rest.split(' ', 1)
-    # print(tz_and_microseconds.split('.'))
+    # #print(tz_and_microseconds.split('.'))
     tz_str, _,microseconds_str = tz_and_microseconds.split('.')
     
     # 获取微秒部分的最后三位数字
@@ -221,7 +236,7 @@ def convert_to_datetime(timestamp_str):
     
     # 将微秒部分添加到datetime对象
     final_datetime = datetime_part.replace(microsecond=microseconds)
-    # print(final_datetime)
+    # #print(final_datetime)
     return final_datetime
 
 def find_between_log(logs, startingtime, endingtime):
@@ -247,11 +262,12 @@ def process_logs(logs, api_log_entry):
             matched_api = match_log_with_api(trace)
             if matched_api:
                 matched_logs = matched_api
-                # print("APII",matched_logs)
+                # #print("APII",matched_logs)
                 desire_logs = desire_log[matched_logs]
                 closest_log = find_between_log(desire_logs, startingtime,endingtime)
                 if closest_log:
-                    print('Find')
+                    # #print('Find')
+                    pass
                 else:
                     return None
                 closest_logs.append(closest_log)
@@ -261,7 +277,7 @@ def process_logs(logs, api_log_entry):
 
 def find_inconsistent_sequences(seeds_trace):
     inconsistent_sequences = {}
-    # print('the seeds trace is:',seeds_trace)
+    # #print('the seeds trace is:',seeds_trace)
     for key, sequences in seeds_trace.items():
         seen_types = []
         inconsistent_sequences[key] = []
@@ -278,7 +294,7 @@ def collect_logs(index_logs,sample):
     trace_nums = []
     for index, group in index_logs:
         groups = [i["method"]+"<"+normalize_url(i["url"]) for i in group]
-        # print(groups,"===",sample,issuperset(groups,sample))
+        # #print(groups,"===",sample,issuperset(groups,sample))
         if issuperset(groups,sample):
             trace_nums.append(group)
     return trace_nums    
@@ -311,16 +327,16 @@ def find_relative_logs(traces,API1,API2):
             matched_api = match_log_with_api(trace)
             if matched_api:
                 matched_logs = matched_api
-                # print("APII",matched_logs)
+                # #print("APII",matched_logs)
                 desire_logs = desire_log[matched_logs]
                 closest_log = find_between_log(desire_logs, startingtime,endingtime)
-                # print('log',closest_log,trace,API1,API2)
+                # #print('log',closest_log,trace,API1,API2)
                 if closest_log:
                     if trace["method"]+"<"+normalize_url(trace["url"]) == API1:
-                        # print('Find log1')
+                        # #print('Find log1')
                         Log1 = closest_log
                     elif trace["method"]+"<"+normalize_url(trace["url"]) == API2:
-                        # print('Find log2')
+                        # #print('Find log2')
                         Log2 = closest_log
                 else:
                     return None,None
@@ -347,7 +363,7 @@ def deploy_dataflow(data):
         
         if match:
             key, value, time = match.groups()
-            print(value.strip())
+            # #print(value.strip())
             result_dict[key.strip()] = {"sequence": ast.literal_eval(value.strip()), "time": float(time)}
         elif match_no_time:
             key, value = match_no_time.groups()
@@ -420,32 +436,33 @@ def main():
     group_indices = match_logs_with_tasks(index_logs, tasks)
 
     for task_name, indices in group_indices.items():
-        print("====")
-        print(f"{task_name}: {indices}")
+        #print("====")
+        #print(f"{task_name}: {indices}")
+        pass
 
     # 执行函数
     result = remove_subsets(group_indices)
-    # print("the res is:",result)
+    # #print("the res is:",result)
     seeds_trace = {}
     for i,j in result.items():
         seeds_trace[i] = []
         for k in j:
             logset = []
             sequence = []
-            # print("---------",i,k)
+            # #print("---------",i,k)
             for idx in index_logs[k-1][1]:
                 sequence.append(idx)
             sequence = [f"{entry['method']}<{normalize_url(entry['url'])}" for entry in sequence]
             # sequence = normalize_sequence(sequence)
             # sequence = tuple(sequence)
-            # print(f"==322232",sequence)
+            # #print(f"==322232",sequence)
             for trace in sequence:
                 if trace not in logset:
                     logset.append(trace)
-            # print('trace',logset)
+            # #print('trace',logset)
             seeds_trace[i].append([k,logset])
     common_sequences = find_inconsistent_sequences(seeds_trace)
-    print("the common seq is:",common_sequences)
+    #print("the common seq is:",common_sequences)
     for seeds_name, sequence in common_sequences.items(): 
         if dataflowFLAG:
             start_time = time.time()
@@ -454,26 +471,30 @@ def main():
                 dataset = collect_logs(index_logs,sample)
                 dataset.append(index_logs[idx-1][1])
                 trace_dataset = dataset
-                # print('trace_dataset',dataset,"--",index_logs[idx-1][1])
+                # #print('trace_dataset',dataset,"--",index_logs[idx-1][1])
                 # time.sleep(2)
                 for trace_seq in trace_dataset:
-                    print('trace',trace_seq)
+                    #print('trace',trace_seq)
                     # time.sleep(5)
                     cloest_logs = process_logs(log_lines,trace_seq)
                     if len(prompt_logs) < 6 and cloest_logs and cloest_logs not in  prompt_logs:
                         prompt_logs.append(cloest_logs)
-                # print(sample,prompt_logs)
+                # #print(sample,prompt_logs)
                 query  = " ".join(sample)
                 logs = ""
                 for idx,dict_logs in enumerate(prompt_logs):
                     title = "<logset" + str(idx) + ">" + "\n"
                     output = title + "\n\n".join(dict_to_string(d) for d in dict_logs)
                     logs += output
-                # print(query,logs)
+                # #print(query,logs)
                 _,result = checker.check_data_relationship(logs,trace)
                 # pattern = re.compile(r"\'(.*?)\'")
-                
-    if dataconstraintFLAG:
+    
+    if dataconstraintFLAG and api_key == "null":
+        with open("data_constraint_res.log", "r") as f:
+            log_content = f.read()
+            print(log_content)
+    if dataconstraintFLAG and api_key != "null":
         #TODO: Integrate the dataflow blank 
         pattern = re.compile(r"\'(.*?)\'")
         matches = pattern.findall(dataflow)
@@ -482,37 +503,41 @@ def main():
         unique_matches = list(set(matches))
         long_string = ", ".join(unique_matches)
 
-        print("unique_matches",unique_matches,len(unique_matches))
-        time.sleep(10)
+        #print("unique_matches",unique_matches,len(unique_matches))
+        # time.sleep(10)
         # data_constrains = {}
         # Calculate the dataconstraint
         lack = []
         for i, disp_match in enumerate(unique_matches):
             # if i >= 10: break
+            if disp_match in skip_elements:
+                print(f"Skipping element: {disp_match}")
+                continue  
             start,end = disp_match.split(">")
-            print("the start and end",start,end)
+            #print("the start and end",start,end)
             start_API,end_API = API_service[start.strip()], API_service[end.strip()]
-            print("the start and end API",start_API,end_API)
+            #print("the start and end API",start_API,end_API)
             totallog1s = []
             totallog2s = []
-            # print(disp_match)
+            # #print(disp_match)
+            if True:
             # if disp_match and (disp_match not in list(data_constrains.keys())) and ("verifycode.service.impl.VerifyCodeServiceImpl.getImageCode" not in disp_match) :
-            if "other.service.OrderOtherServiceImpl.queryOrdersForRefresh" in start.strip() and "inside_payment.service.InsidePaymentServiceImpl.pay" in end.strip():
+            # if "other.service.OrderOtherServiceImpl.queryOrdersForRefresh" in start.strip() and "inside_payment.service.InsidePaymentServiceImpl.pay" in end.strip():
                 if disp_match:
                     try:
                         for seeds_name, sequence in common_sequences.items(): 
                             for idx,seq in sequence:
                                 if start_API in seq and end_API in seq:
-                                    print("swq",idx,seq)
+                                    #print("swq",idx,seq)
                                     logs = index_logs[idx-1]
                                     log1,log2 = find_relative_logs(logs[1],start_API,end_API)
-                                    print(log1,"---",log2)
+                                    #print(log1,"---",log2)
                                     if "queryOrdersForRefresh" in start and ("pay" in end or "cancel" in end or "consign" in end):
                                         pattern = r'orderId=([a-f0-9\-]+)'
                                         match = re.search(pattern, log2["arguments"][0])
                                         if match:
                                             order_id = match.group(1)
-                                            print(f"Extracted orderId: {order_id}",log1["return"])
+                                            #print(f"Extracted orderId: {order_id}",log1["return"])
                                             if order_id not in log1["return"]:
                                                 break
                                     if log1 and log2 and len(totallog1s) < 3:
@@ -524,55 +549,57 @@ def main():
                                 alllogs.append(totallog1s[i])
                                 alllogs.append(totallog2s[i])
                             logs = ""
-                            # print("alllogs",alllogs)
+                            # #print("alllogs",alllogs)
                             # title = "<logset" + str(idx%2) + ">" + "\n"
                             output = "\n".join(dict_to_string(d) for d in alllogs)
-                            # print('the logs are:',output)
+                            # #print('the logs are:',output)
                             class_definition1,class_definition2 = trainticket_class_def[start.strip()]['output'][1],trainticket_class_def[end.strip()]["input"][1]
-                            print("class def1 and def2",class_definition1,class_definition2)
+                            #print("class def1 and def2",class_definition1,class_definition2)
                             entity1,entity2 = trainticket_class_def[start.strip()]['output'][0],trainticket_class_def[end.strip()]["input"][0]
-                            print(alllogs)
+                            #print(alllogs)
                             # time.sleep(30)
                             passed,result = checker.check_input_constraint(class_name1=entity1, class_name2=entity2, class_definition1=class_definition1,
                             class_definition2=class_definition2,logs=[str(log) for log in alllogs])
-                            print(result)
+                            #print(result)
                             if passed:
                                 code_string = json.dumps(result, indent=4, ensure_ascii=False)
                                 data_constrains[disp_match] = code_string
                         else:
+                            #print("the logs are",len(totallog1s))
                             lack.append(disp_match)
                     except:
                         pass
-            # print(data_constrains)
-        #     print(result)
+            # #print(data_constrains)
+        #     #print(result)
         #     time.sleep(5)
         # end_time = time.time()
         # execution_time = end_time - start_time
-        # print(f"time: {execution_time} sec")
-        # print(len(sequence))
-    data_transition = deploy_dataflow(dataflow)
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    file_name = f"data_transition_{timestamp}.json"
-    with open(file_name, 'w') as file:
-        json.dump(data_constrains, file, indent=4)
-    print("the lack is:",lack,len(lack))
-    for element in unique_matches:
-        if element not in list(data_constrains.keys()) and element not in lack:
-            print("the element is:",element)
+        # #print(f"time: {execution_time} sec")
+        # #print(len(sequence))
+        data_transition = deploy_dataflow(dataflow)
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        file_name = f"data_transition_{timestamp}.json"
+        with open(file_name, 'w') as file:
+            json.dump(data_constrains, file, indent=4)
+        # #print("the lack is:",lack,len(lack))
+        for element in unique_matches:
+            if element not in list(data_constrains.keys()) and element not in lack:
+                #print("the element is:",element)
+                pass
     #Trigger transition
     if TriggerflowFLAG:
         for seeds_name, sequence in common_sequences.items(): 
             if len(sequence) > 1:
-                print("the seq is:",seeds_name,sequence)
+                #print("the seq is:",seeds_name,sequence)
                 if seeds_name in data_transition.keys():
-                    # print(seeds_name,data_transition[seeds_name]["sequence"])
+                    # #print(seeds_name,data_transition[seeds_name]["sequence"])
                     datatrans = []
                     for disp_match in data_transition[seeds_name]["sequence"]:
                         start,end = disp_match.split(">")
                         start_API,end_API = API_service[start.strip()], API_service[end.strip()]
-                        # print(start_API,end_API)
+                        # #print(start_API,end_API)
                         datatrans.append(start_API + " > " + end_API)
-                    print("the datatrans is:",datatrans)
+                    #print("the datatrans is:",datatrans)
                     branch_diffs = {}
                     diff = None
                     all_apis_list = []
@@ -581,7 +608,7 @@ def main():
                             if i >= j: 
                                 continue
                             diff = set(branch1).symmetric_difference(set(branch2))
-                            print('the diff is:',diff,set(branch1).issubset(set(branch2)),set(branch2).issubset(set(branch1)))
+                            #print('the diff is:',diff,set(branch1).issubset(set(branch2)),set(branch2).issubset(set(branch1)))
                             if set(branch1).issubset(set(branch2)) or set(branch2).issubset(set(branch1)):
                                 break
                             # else:
@@ -593,14 +620,14 @@ def main():
                                 all_apis_list = list(all_apis)
                     if "POST</api/v1/travel2service/trips/left" in all_apis_list:
                         all_apis_list.remove("POST</api/v1/travel2service/trips/left")
-                    print("Branch Differences:",branch_diffs,all_apis_list)
+                    #print("Branch Differences:",branch_diffs,all_apis_list)
                     branch_dataflows = {}
                     for id, branch in sequence:
                         branch_dataflow = [flow for flow in datatrans if any(endpoint in flow for endpoint in branch)]
                         break
 
-                    print("\nBranch Dataflows:")
-                    print(json.dumps(branch_dataflows, indent=4))
+                    #print("\nBranch Dataflows:")
+                    #print(json.dumps(branch_dataflows, indent=4))
 
 if __name__ == "__main__":
     main()

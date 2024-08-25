@@ -1455,11 +1455,6 @@
                     "method_name": "pay",
                     "url": "/api/v1/orderservice/order/{",
                     "http_method": "GET"
-                },
-                {
-                    "method_name": "pay",
-                    "url": "/api/v1/paymentservice/payment",
-                    "http_method": "POST"
                 }
             ],
             "all_rest_template_calls": [
@@ -1477,9 +1472,37 @@
                     "method_name": "pay",
                     "url": "/api/v1/orderservice/order/{",
                     "http_method": "GET"
+                }
+            ],
+            "service_methods": []
+        },
+        "topup": {
+            "method_name": "topup",
+            "invocations": [
+                "topup",
+                "getServiceUrl",
+                "setOrderStatus"
+            ],
+            "rest_template_calls": [
+                {
+                    "method_name": "topup",
+                    "url": "/api/v1/paymentservice/payment",
+                    "http_method": "POST"
+                }
+            ],
+            "all_rest_template_calls": [
+                {
+                    "method_name": "setOrderStatus",
+                    "url": "/api/v1/orderservice/order/status/{",
+                    "http_method": "GET"
                 },
                 {
-                    "method_name": "pay",
+                    "method_name": "setOrderStatus",
+                    "url": "/api/v1/orderOtherService/orderOther/status/{",
+                    "http_method": "GET"
+                },
+                {
+                    "method_name": "topup",
                     "url": "/api/v1/paymentservice/payment",
                     "http_method": "POST"
                 }
