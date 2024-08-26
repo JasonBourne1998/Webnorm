@@ -12,7 +12,6 @@ COPY Event_graph /app/Event_graph
 COPY Anomaly_detect.py /app/Anomaly_detect.py
 COPY Train_data.txt /app/Train_data.txt
 COPY Test_data.txt /app/Test_data.txt
-COPY Test_data_modify.txt /app/Test_data_modify.txt
 COPY slimit /usr/local/lib/python3.10/site-packages/slimit
 
 CMD ["bash"]
