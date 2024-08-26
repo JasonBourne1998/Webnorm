@@ -1,6 +1,9 @@
 *.txt
 __pychache__
 *.log
+!commonsense_*.log
+!data_constraint_res.log
+!flow_constraint_res.log
 NiceFish
 *yml
 commonsense.py

@@ -1,0 +1,65 @@
+/api/v1/rebookService/rebook > /api/v1/rebookService/payDifference | /api/v1/rebookService/updateOrder:
+ def is_branch_a(log: str) -> bool:
+    if "Response(status=1" in log:
+        return True
+    else:
+        raise ValueError("should belong to /api/v1/orderService/refreshorder due to parameter condition")
+/api/v1/rebookService/rebook > /api/v1/orderService/refreshorder:
+ 
+def is_branch_b(log: str) -> bool:
+    if "Response(status=0" in log:
+        return True
+    else:
+        raise ValueError("should belong to /api/v1/rebookService/payDifference | /api/v1/rebookService/updateOrder due to parameter condition")
+/api/v1/users/login > /api/v1/orderOtherService/orderOther/query:
+ def is_branch_a(log: str) -> bool:
+    if "roles=[ROLE_USER]" in log:
+        return True
+    else:
+        raise ValueError(f"should belong to /api/v1/adminorderservice/adminorder due to parameter condition")
+/api/v1/users/login > /api/v1/adminorderservice/adminorder:
+ 
+def is_branch_b(log: str) -> bool:
+    if "roles=[ROLE_ADMIN]" in log:
+        return True
+    else:
+        raise ValueError(f"should belong to /api/v1/orderOtherService/orderOther/query due to parameter condition")
+/api/v1/rebookService/rebook > /api/v1/rebookService/payDifference:
+ import re
+
+def extract_order_money_difference(log: str) -> float:
+    match = re.search(r'orderMoneyDifference=([0-9.]+|null)', log)
+    if match:
+        value = match.group(1)
+        if value == 'null':
+            return 0.0
+        else:
+            return float(value)
+    else:
+        raise ValueError("orderMoneyDifference not found in log")
+
+def is_branch_a(log: str) -> bool:
+    order_money_difference = extract_order_money_difference(log)
+    if order_money_difference != 0.0:
+        return True
+    else:
+        raise ValueError(f"should belong to /api/v1/rebookService/updateOrder due to parameter condition: orderMoneyDifference={order_money_difference}")
+/api/v1/rebookService/rebook > /api/v1/rebookService/updateOrder:
+ import re
+
+def extract_order_money_difference(log: str) -> float:
+    match = re.search(r'orderMoneyDifference=([0-9.]+|null)', log)
+    if match:
+        value = match.group(1)
+        if value == 'null':
+            return 0.0
+        else:
+            return float(value)
+    else:
+        raise ValueError("orderMoneyDifference not found in log")
+def is_branch_b(log: str) -> bool:
+    order_money_difference = extract_order_money_difference(log)
+    if order_money_difference == 0.0:
+        return True
+    else:
+        raise ValueError(f"should belong to /api/v1/rebookService/payDifference due to parameter condition: orderMoneyDifference={order_money_difference}")

@@ -678,47 +678,7 @@ def main():
                 #print("the element is:",element)
                 pass
     #Trigger transition
-    if TriggerflowFLAG:
-        # for seeds_name, sequence in common_sequences.items(): 
-        #     if len(sequence) > 1:
-        #         #print("the seq is:",seeds_name,sequence)
-        #         if seeds_name in data_transition.keys():
-        #             # #print(seeds_name,data_transition[seeds_name]["sequence"])
-        #             datatrans = []
-        #             for disp_match in data_transition[seeds_name]["sequence"]:
-        #                 start,end = disp_match.split(">")
-        #                 start_API,end_API = API_service[start.strip()], API_service[end.strip()]
-        #                 # #print(start_API,end_API)
-        #                 datatrans.append(start_API + " > " + end_API)
-        #             #print("the datatrans is:",datatrans)
-        #             branch_diffs = {}
-        #             diff = None
-        #             all_apis_list = []
-        #             for i, (id1, branch1) in enumerate(sequence):
-        #                 for j, (id2, branch2) in enumerate(sequence):
-        #                     if i >= j: 
-        #                         continue
-        #                     diff = set(branch1).symmetric_difference(set(branch2))
-        #                     #print('the diff is:',diff,set(branch1).issubset(set(branch2)),set(branch2).issubset(set(branch1)))
-        #                     if set(branch1).issubset(set(branch2)) or set(branch2).issubset(set(branch1)):
-        #                         break
-        #                     # else:
-        #                     if diff:
-        #                         branch_diffs[f'branch_{id1}_vs_branch_{id2}'] = list(diff)
-        #                         all_apis = set()
-        #                         for apis in branch_diffs.values():
-        #                             all_apis.update(apis)
-        #                         all_apis_list = list(all_apis)
-        #             if "POST</api/v1/travel2service/trips/left" in all_apis_list:
-        #                 all_apis_list.remove("POST</api/v1/travel2service/trips/left")
-        #             #print("Branch Differences:",branch_diffs,all_apis_list)
-        #             branch_dataflows = {}
-        #             for id, branch in sequence:
-        #                 branch_dataflow = [flow for flow in datatrans if any(endpoint in flow for endpoint in branch)]
-        #                 break
-
-                    #print("\nBranch Dataflows:")
-                    #print(json.dumps(branch_dataflows, indent=4))
+    if TriggerflowFLAG and api_key != "null":
         current_dir = os.path.dirname(os.path.abspath(__file__))
         examples_folder = os.path.abspath(os.path.join(current_dir, "../consistency_prompt/examples/"))
         
@@ -726,7 +686,11 @@ def main():
         print("Final API Mappings:")
         for key, value in all_api_mappings.items():
             print(f"{key}:\n {value}")
-
+    elif TriggerflowFLAG and api_key == "null":
+        with open("flow_constraint_res.log", "r") as f:
+            log_content = f.read()
+            print(log_content)
+            
 if __name__ == "__main__":
     main()
 

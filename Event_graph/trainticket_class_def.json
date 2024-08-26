@@ -1,7 +1,7 @@
 {
     "auth.service.impl.TokenServiceImpl.getToken": {
-        "input": ["BasicAuthDto","public class BasicAuthDto implements Serializable {\n    private static final long serialVersionUID = 5505144168320447022L;\n    private String username;\n    private String password;\n    private String verificationCode;\n}"],
-        "output": ["TokenDto","public class TokenDto implements Serializable {\n    private static final long serialVersionUID = 8460179745119402516L;\n    private String userId;\n    private String username;\n    private String token;\n}"]
+        "input": ["BasicAuthDto","public class BasicAuthDto{\n    private static final long serialVersionUID = 5505144168320447022L;\n    private String username;\n    private String password;\n    private String verificationCode;\n}"],
+        "output": ["TokenDto","public class TokenDto{\n    private static final long serialVersionUID = 8460179745119402516L;\n    private String userId;\n    private String username;\n    private String token;\n}"]
     },
     "verifycode.service.impl.VerifyCodeServiceImpl.getImageCode":{
         "input": ["None","60, 20, os,headers,cookie,request"],
