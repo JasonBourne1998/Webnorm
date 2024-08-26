@@ -7,13 +7,15 @@ import sys
 import os
 from dotenv import load_dotenv
 import argparse
-
+import glob
+import subprocess
 sys.path.append('../consistency_prompt/examples')
 sys.path.append('../consistency_prompt')
+sys.path.append('../consistency_prompt/gptchecker')
 import data_relationship
 import ast
 from gptchecker import GPTChecker
-import trigger_code_parse
+# import trigger_code_parse
 
 skip_elements = [
     "travel2.service.TravelServiceImpl.queryByBatch > preserve.service.PreserveServiceImpl.preserve",
@@ -46,7 +48,7 @@ dataflow = """
 #getEnter:['verifycode.service.impl.VerifyCodeServiceImpl.getImageCode > auth.service.impl.TokenServiceImpl.getToken', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh'] 17.6727
 #trainticket_pay_seeds:['auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'order.service.OrderServiceImpl.queryOrdersForRefresh > inside_payment.service.InsidePaymentServiceImpl.pay', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > inside_payment.service.InsidePaymentServiceImpl.pay', 'inside_payment.service.InsidePaymentServiceImpl.pay > order.service.OrderServiceImpl.queryOrdersForRefresh', 'inside_payment.service.InsidePaymentServiceImpl.pay > other.service.OrderOtherServiceImpl.queryOrdersForRefresh'] 29.5432s
 #trainticket_consign_seeds: ['auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.queryByOrderId', 'order.service.OrderServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.queryByOrderId'] 12.95 ['verifycode.service.impl.VerifyCodeServiceImpl.getImageCode > auth.service.impl.TokenServiceImpl.getToken', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh'] 16.577 ['auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'order.service.OrderServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.queryByOrderId', 'order.service.OrderServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.updateConsignRecord', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.queryByOrderId', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > consign.service.ConsignServiceImpl.updateConsignRecord'] 22.2460
-#trainticket_preserve_seeds: ['verifycode.service.impl.VerifyCodeServiceImpl.getImageCode > auth.service.impl.TokenServiceImpl.getToken', 'auth.service.impl.TokenServiceImpl.getToken > assurance.service.AssuranceServiceImpl.getAllAssuranceTypes', 'auth.service.impl.TokenServiceImpl.getToken > contacts.service.ContactsServiceImpl.findContactsByAccountId', 'auth.service.impl.TokenServiceImpl.getToken > foodsearch.service.FoodServiceImpl.getAllFood', 'auth.service.impl.TokenServiceImpl.getToken > preserveOther.service.PreserveOtherServiceImpl.preserve', 'contacts.service.ContactsServiceImpl.findContactsByAccountId > preserveOther.service.PreserveOtherServiceImpl.preserve', 'travel.service.TravelServiceImpl.queryByBatch > preserveOther.service.PreserveOtherServiceImpl.preserve', 'travel2.service.TravelServiceImpl.queryByBatch > preserveOther.service.PreserveOtherServiceImpl.preserve','contacts.service.ContactsServiceImpl.findContactsByAccountId > preserve.service.PreserveServiceImpl.preserve', 'foodsearch.service.FoodServiceImpl.getAllFood > preserve.service.PreserveServiceImpl.preserve','travel2.service.TravelServiceImpl.queryByBatch > preserve.service.PreserveServiceImpl.preserve','auth.service.impl.TokenServiceImpl.getToken > preserve.service.PreserveServiceImpl.preserve','travel.service.TravelServiceImpl.queryByBatch > preserve.service.PreserveServiceImpl.preserve'] 16s
+#trainticket_preserve_seeds: ['verifycode.service.impl.VerifyCodeServiceImpl.getImageCode > auth.service.impl.TokenServiceImpl.getToken', 'auth.service.impl.TokenServiceImpl.getToken > assurance.service.AssuranceServiceImpl.getAllAssuranceTypes', 'auth.service.impl.TokenServiceImpl.getToken > contacts.service.ContactsServiceImpl.findContactsByAccountId', 'auth.service.impl.TokenServiceImpl.getToken > foodsearch.service.FoodServiceImpl.getAllFood', 'auth.service.impl.TokenServiceImpl.getToken > preserveOther.service.PreserveOtherServiceImpl.preserve', 'contacts.service.ContactsServiceImpl.findContactsByAccountId > preserveOther.service.PreserveOtherServiceImpl.preserve', 'travel2.service.TravelServiceImpl.queryByBatch > preserveOther.service.PreserveOtherServiceImpl.preserve','contacts.service.ContactsServiceImpl.findContactsByAccountId > preserve.service.PreserveServiceImpl.preserve', 'foodsearch.service.FoodServiceImpl.getAllFood > preserve.service.PreserveServiceImpl.preserve','auth.service.impl.TokenServiceImpl.getToken > preserve.service.PreserveServiceImpl.preserve','travel.service.TravelServiceImpl.queryByBatch > preserve.service.PreserveServiceImpl.preserve'] 16s
 #trainticket_collect_seeds: ['auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > execute.service.ExecuteServiceImpl.ticketCollect', 'auth.service.impl.TokenServiceImpl.getToken > other.service.OrderOtherServiceImpl.queryOrdersForRefresh', 'auth.service.impl.TokenServiceImpl.getToken > order.service.OrderServiceImpl.queryOrdersForRefresh', 'order.service.OrderServiceImpl.queryOrdersForRefresh > execute.service.ExecuteServiceImpl.ticketCollect', 'other.service.OrderOtherServiceImpl.queryOrdersForRefresh > execute.service.ExecuteServiceImpl.ticketCollect'] 28.3366
 #trainticket_advancedsearch_seeds: [] 6.99,29.64,11.0810
 #
@@ -82,8 +84,14 @@ with open("API_service.json") as fp:
 with open('trainticket_class_def.json') as fp:
     trainticket_class_def = json.load(fp)
 
-with open('data_transition_20240718082638.json') as fp:
+with open('../data_constraints.json') as fp:
     data_constrains = json.load(fp)
+
+with open('dataset/dataflow_transition/dataflow.json') as fp:
+    data_constrains_logs = json.load(fp)
+    
+with open('dataset/trigger_transition/trigger.json') as fp:
+    trigger_constrains_logs = json.load(fp)
 
 def read_log_file(file_path):
     with open(file_path, 'r') as file:
@@ -376,6 +384,74 @@ def deploy_dataflow(data):
             result_dict[key.strip()] = {"sequence":  ast.literal_eval(value.strip()), "time": float(time)}
     return result_dict
 
+def run_flow_constraint_script(script_path):
+    try:
+        result = subprocess.run(
+            ["python3", script_path],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return result.stdout.split("the code is:")[1].strip()
+    except subprocess.CalledProcessError as e:
+        return f"Error: {e.returncode}\n{e.stderr}"
+
+def parse_result(script_path,output):
+    with open(script_path, encoding='utf-8') as file:
+        code = file.read()
+    match = re.search(r'parent_url\s*=\s*"([^"]+)"', code)
+    if match:
+        parent_url = match.group(1)
+    else:
+        parent_url = None
+    match = re.search(r'child_url1\s*=\s*"([^"]+)"', code)
+    if match:
+        child_url1 = match.group(1)
+    else:
+        child_url1 = None
+    match = re.search(r'child_url2\s*=\s*"([^"]+)"', code)
+    if match:
+        child_url2 = match.group(1)
+    else:
+        child_url2 = None
+    print(parent_url,child_url1,child_url2)
+    index_a = output.find('def is_branch_a')
+    index_b = output.find('def is_branch_b')
+
+    if index_a != -1 and index_b != -1:
+        code_a = output[:index_b].strip() 
+        code_b = output[:index_a].strip() + "\n" + output[index_b:].strip()         
+    else:
+        code_a = None
+        code_b = None
+    extracted_data = {}
+    extracted_data[parent_url + " > " + child_url1] = code_a
+    extracted_data[parent_url + " > " + child_url2] = code_b
+    
+    return extracted_data
+    
+def collect_all_flow_constraints(examples_folder):
+    pattern = os.path.join(examples_folder, "flow_constraint*.py")
+    flow_constraint_files = glob.glob(pattern)
+    
+    all_mappings = {}
+    
+    for script_path in flow_constraint_files:
+        script_name = os.path.basename(script_path)
+        # print(f"Running script: {script_name}")
+        output = run_flow_constraint_script(script_path)
+        # print(f"Output from {script_name}:\n{output}\n")
+        
+        if output.startswith("Error:"):
+            all_mappings[script_name] = {"error": output}
+            continue
+        
+        mappings = parse_result(script_path,output)
+        
+        all_mappings.update(mappings)
+    
+    return all_mappings
+
 def main():
     # 设置命令行参数解析
     parser = argparse.ArgumentParser(description="Script to set dataflowFLAG and TriggerflowFLAG.")
@@ -471,24 +547,18 @@ def main():
                 dataset = collect_logs(index_logs,sample)
                 dataset.append(index_logs[idx-1][1])
                 trace_dataset = dataset
-                # #print('trace_dataset',dataset,"--",index_logs[idx-1][1])
-                # time.sleep(2)
                 for trace_seq in trace_dataset:
-                    #print('trace',trace_seq)
-                    # time.sleep(5)
                     cloest_logs = process_logs(log_lines,trace_seq)
                     if len(prompt_logs) < 6 and cloest_logs and cloest_logs not in  prompt_logs:
                         prompt_logs.append(cloest_logs)
-                # #print(sample,prompt_logs)
                 query  = " ".join(sample)
                 logs = ""
                 for idx,dict_logs in enumerate(prompt_logs):
                     title = "<logset" + str(idx) + ">" + "\n"
                     output = title + "\n\n".join(dict_to_string(d) for d in dict_logs)
                     logs += output
-                # #print(query,logs)
                 _,result = checker.check_data_relationship(logs,trace)
-                # pattern = re.compile(r"\'(.*?)\'")
+                
     
     if dataconstraintFLAG and api_key == "null":
         with open("data_constraint_res.log", "r") as f:
@@ -510,9 +580,9 @@ def main():
         lack = []
         for i, disp_match in enumerate(unique_matches):
             # if i >= 10: break
-            if disp_match in skip_elements:
-                print(f"Skipping element: {disp_match}")
-                continue  
+            # if disp_match in skip_elements:
+            #     # print(f"Skipping element: {disp_match}")
+            #     continue  
             start,end = disp_match.split(">")
             #print("the start and end",start,end)
             start_API,end_API = API_service[start.strip()], API_service[end.strip()]
@@ -543,7 +613,8 @@ def main():
                                     if log1 and log2 and len(totallog1s) < 3:
                                         totallog1s.append(log1)
                                         totallog2s.append(log2)
-                        if len(totallog1s) >= 1:
+                        if len(totallog1s) >= 1 and disp_match not in list(data_constrains_logs.keys()):
+                            print(22,disp_match)
                             alllogs = []
                             for i in range(len(totallog1s)):
                                 alllogs.append(totallog1s[i])
@@ -565,9 +636,29 @@ def main():
                                 code_string = json.dumps(result, indent=4, ensure_ascii=False)
                                 data_constrains[disp_match] = code_string
                         else:
-                            #print("the logs are",len(totallog1s))
-                            lack.append(disp_match)
-                    except:
+                            if disp_match in list(data_constrains_logs.keys()):
+                                print(11,skip_elements,disp_match,11)
+                                alllogs = data_constrains_logs[disp_match]
+                                # print(alllogs)
+                                logs = ""
+                                # #print("alllogs",alllogs)
+                                # title = "<logset" + str(idx%2) + ">" + "\n"
+                                # output = "\n".join(dict_to_string(d) for d in alllogs)
+                                # print('the logs are:',output)
+                                class_definition1,class_definition2 = trainticket_class_def[start.strip()]['output'][1],trainticket_class_def[end.strip()]["input"][1]
+                                # print("class def1 and def2",class_definition1,class_definition2)
+                                entity1,entity2 = trainticket_class_def[start.strip()]['output'][0],trainticket_class_def[end.strip()]["input"][0]
+                                # print(alllogs)
+                                # time.sleep(30)
+                                passed,result = checker.check_input_constraint(class_name1=entity1, class_name2=entity2, class_definition1=class_definition1,
+                                class_definition2=class_definition2,logs=[str(log) for log in alllogs])
+                                print("the res",result)
+                                if passed:
+                                    code_string = json.dumps(result, indent=4, ensure_ascii=False)
+                                    data_constrains[disp_match] = code_string
+                                lack.append(disp_match)
+                    except Exception as error:
+                        print(error)
                         pass
             # #print(data_constrains)
         #     #print(result)
@@ -588,46 +679,53 @@ def main():
                 pass
     #Trigger transition
     if TriggerflowFLAG:
-        for seeds_name, sequence in common_sequences.items(): 
-            if len(sequence) > 1:
-                #print("the seq is:",seeds_name,sequence)
-                if seeds_name in data_transition.keys():
-                    # #print(seeds_name,data_transition[seeds_name]["sequence"])
-                    datatrans = []
-                    for disp_match in data_transition[seeds_name]["sequence"]:
-                        start,end = disp_match.split(">")
-                        start_API,end_API = API_service[start.strip()], API_service[end.strip()]
-                        # #print(start_API,end_API)
-                        datatrans.append(start_API + " > " + end_API)
-                    #print("the datatrans is:",datatrans)
-                    branch_diffs = {}
-                    diff = None
-                    all_apis_list = []
-                    for i, (id1, branch1) in enumerate(sequence):
-                        for j, (id2, branch2) in enumerate(sequence):
-                            if i >= j: 
-                                continue
-                            diff = set(branch1).symmetric_difference(set(branch2))
-                            #print('the diff is:',diff,set(branch1).issubset(set(branch2)),set(branch2).issubset(set(branch1)))
-                            if set(branch1).issubset(set(branch2)) or set(branch2).issubset(set(branch1)):
-                                break
-                            # else:
-                            if diff:
-                                branch_diffs[f'branch_{id1}_vs_branch_{id2}'] = list(diff)
-                                all_apis = set()
-                                for apis in branch_diffs.values():
-                                    all_apis.update(apis)
-                                all_apis_list = list(all_apis)
-                    if "POST</api/v1/travel2service/trips/left" in all_apis_list:
-                        all_apis_list.remove("POST</api/v1/travel2service/trips/left")
-                    #print("Branch Differences:",branch_diffs,all_apis_list)
-                    branch_dataflows = {}
-                    for id, branch in sequence:
-                        branch_dataflow = [flow for flow in datatrans if any(endpoint in flow for endpoint in branch)]
-                        break
+        # for seeds_name, sequence in common_sequences.items(): 
+        #     if len(sequence) > 1:
+        #         #print("the seq is:",seeds_name,sequence)
+        #         if seeds_name in data_transition.keys():
+        #             # #print(seeds_name,data_transition[seeds_name]["sequence"])
+        #             datatrans = []
+        #             for disp_match in data_transition[seeds_name]["sequence"]:
+        #                 start,end = disp_match.split(">")
+        #                 start_API,end_API = API_service[start.strip()], API_service[end.strip()]
+        #                 # #print(start_API,end_API)
+        #                 datatrans.append(start_API + " > " + end_API)
+        #             #print("the datatrans is:",datatrans)
+        #             branch_diffs = {}
+        #             diff = None
+        #             all_apis_list = []
+        #             for i, (id1, branch1) in enumerate(sequence):
+        #                 for j, (id2, branch2) in enumerate(sequence):
+        #                     if i >= j: 
+        #                         continue
+        #                     diff = set(branch1).symmetric_difference(set(branch2))
+        #                     #print('the diff is:',diff,set(branch1).issubset(set(branch2)),set(branch2).issubset(set(branch1)))
+        #                     if set(branch1).issubset(set(branch2)) or set(branch2).issubset(set(branch1)):
+        #                         break
+        #                     # else:
+        #                     if diff:
+        #                         branch_diffs[f'branch_{id1}_vs_branch_{id2}'] = list(diff)
+        #                         all_apis = set()
+        #                         for apis in branch_diffs.values():
+        #                             all_apis.update(apis)
+        #                         all_apis_list = list(all_apis)
+        #             if "POST</api/v1/travel2service/trips/left" in all_apis_list:
+        #                 all_apis_list.remove("POST</api/v1/travel2service/trips/left")
+        #             #print("Branch Differences:",branch_diffs,all_apis_list)
+        #             branch_dataflows = {}
+        #             for id, branch in sequence:
+        #                 branch_dataflow = [flow for flow in datatrans if any(endpoint in flow for endpoint in branch)]
+        #                 break
 
                     #print("\nBranch Dataflows:")
                     #print(json.dumps(branch_dataflows, indent=4))
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        examples_folder = os.path.abspath(os.path.join(current_dir, "../consistency_prompt/examples/"))
+        
+        all_api_mappings = collect_all_flow_constraints(examples_folder)        
+        print("Final API Mappings:")
+        for key, value in all_api_mappings.items():
+            print(f"{key}:\n {value}")
 
 if __name__ == "__main__":
     main()
