@@ -1,14 +1,3 @@
-# Log Instrumentation
-
-## Deleting Original Logs
-
-The current log instrumentation (Spring AOP) is suitable for the Spring Boot framework. If you wish to delete the original logs, you can use the following command:
-
-```
-python3 deleteLogs.py <web_application_path>
-```
-
-Then Instrument log with AOP intercepter: 
-```
-python3 Instrumentation.py <web application path>
-```
+version https://git-lfs.github.com/spec/v1
+oid sha256:d1fcfaaf47a203c196e54459005383d932bbc06bd73ad003b456e0892f1dc7f0
+size 369
