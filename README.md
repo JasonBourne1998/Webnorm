@@ -1,4 +1,4 @@
-# TamperLogPrompt
+# Webnorm
 Official repository for "Detecting and Explaining Anomalies Caused by Web Tamper Attacks via Building Consistency-based Normality".
 
 <p align="center">
