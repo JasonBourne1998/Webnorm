@@ -124,3 +124,19 @@ You can change the GPT model you want to use in the ``LLM_model`` argument in [p
 Please check the [list of GPT models](https://platform.openai.com/docs/models) you can use.
 
 If you have any issues running our code, you can raise a Github issue.
+
+## Citation
+Please consider citing our paper if you find it useful:
+```bibtex
+@inproceedings{10.1145/3691620.3695024,
+author = {Liao, Yifan and Xu, Ming and Lin, Yun and Teoh, Xiwen and Xie, Xiaofei and Feng, Ruitao and Liaw, Frank and Zhang, Hongyu and Dong, Jin Song},
+title = {Detecting and Explaining Anomalies Caused by Web Tamper Attacks via Building Consistency-based Normality},
+year = {2024},
+url = {https://doi.org/10.1145/3691620.3695024},
+doi = {10.1145/3691620.3695024},
+booktitle = {Proceedings of the 39th IEEE/ACM International Conference on Automated Software Engineering},
+pages = {531–543},
+numpages = {13},
+series = {ASE '24}
+}
+```
